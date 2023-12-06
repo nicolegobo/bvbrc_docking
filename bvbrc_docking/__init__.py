@@ -1,1 +1,2 @@
-from .fred import fred_docking
+from .diffdock import diff_dock
+from .fred import fred_dock

@@ -40,13 +40,15 @@ def pdb_split(pdb_file):
     return output_pdbs
 
 
-class fred_docking(object):
+class fred_dock(object):
     """_summary_
 
     Parameters
     ----------
-    object : _type_
-        _description_
+    receptor_pdb : string
+        Path name for the receptor pdb file
+    drug_dbs : string
+        Path name for the drug database smile file
     """
 
     def __init__(self, receptor_pdb, drug_dbs):
@@ -83,10 +85,13 @@ class fred_docking(object):
             process = run_and_save(MKlig_cmd)
             process.wait()
 
-    def run_fred(self):
+    def run_fred(self, n_cpus=1):
         self.oe_docked = f"{self.run_dir}/{self.label}_docked.oeb.gz"
+        fred_exec = "fred"
+        if n_cpus > 1:
+            fred_exec += f" -mpi_np {n_cpus}"
         fred_cmd = (
-            f"fred -receptor {self.oe_receptor} "
+            f"{fred_exec} -receptor {self.oe_receptor} "
             f"-dbase {self.oe_dbs} -docked_molecule_file {self.oe_docked}"
         )
         process = run_and_save(fred_cmd)
@@ -106,18 +111,19 @@ class fred_docking(object):
         lig_pdbs = pdb_split(output_pdb)
 
         pro_u = mda.Universe(self.receptor_pdb)
+        proteins = pro_u.select_atoms("protein")
         for lig_pdb in lig_pdbs:
             lig_u = mda.Universe(lig_pdb)
-            comp_u = mda.Merge(pro_u.atoms, lig_u.atoms)
+            comp_u = mda.Merge(proteins.atoms, lig_u.atoms)
             comp_u.atoms.write(lig_pdb)
 
-    def run(self):
+    def run(self, n_cpus=1):
         os.chdir(self.run_dir)
 
         self.prepare_receptor()
         self.prepare_lig()
 
-        self.run_fred()
+        self.run_fred(n_cpus=n_cpus)
 
         self.prepare_report()
         if self.receptor_pdb.endswith("pdb"):
