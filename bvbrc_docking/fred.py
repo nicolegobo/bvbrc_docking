@@ -5,7 +5,7 @@ from typing import Optional
 import MDAnalysis as mda
 from openeye import oechem
 
-from .utils import run_and_save
+from bvbrc_docking.utils import run_and_save
 
 
 def oe_convert(input_file, output_file):
@@ -51,9 +51,11 @@ class fred_dock(object):
         Path name for the drug database smile file
     """
 
-    def __init__(self, receptor_pdb, drug_dbs):
+    def __init__(self, receptor_pdb, drug_dbs, n_cpus: int = 1, fred_path="", **kwargs):
         self.receptor_pdb = os.path.abspath(receptor_pdb)
         self.drug_dbs = os.path.abspath(drug_dbs)
+        self.n_cpus = n_cpus
+        self.fred_path = fred_path
         self.label = os.path.basename(receptor_pdb).split(".")[0]
         self.hostdir = os.path.abspath("./")
         self.run_dir = f"{self.hostdir}/run_{self.label}"
@@ -85,11 +87,11 @@ class fred_dock(object):
             process = run_and_save(MKlig_cmd)
             process.wait()
 
-    def run_fred(self, n_cpus=1):
+    def run_fred(self):
         self.oe_docked = f"{self.run_dir}/{self.label}_docked.oeb.gz"
         fred_exec = "fred"
-        if n_cpus > 1:
-            fred_exec += f" -mpi_np {n_cpus}"
+        if self.n_cpus > 1:
+            fred_exec += f" -mpi_np {self.n_cpus}"
         fred_cmd = (
             f"{fred_exec} -receptor {self.oe_receptor} "
             f"-dbase {self.oe_dbs} -docked_molecule_file {self.oe_docked}"

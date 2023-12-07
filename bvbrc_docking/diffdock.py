@@ -3,18 +3,15 @@ import os
 
 import pandas as pd
 
-from .utils import clean_pdb, comb_pdb, run_and_save, sdf2pdb
+from bvbrc_docking.utils import clean_pdb, comb_pdb, run_and_save, sdf2pdb
 
 
 class diff_dock(object):
     def __init__(
-        self, pdb_files, lig_dbs, work_dir, output_path, top_n: int = 1
+        self, receptor_pdb, drug_dbs, work_dir, output_path, top_n: int = 1, **kwargs
     ) -> None:
-        if isinstance(pdb_files, str):
-            self.pdb_files = [pdb_files]
-        else:
-            self.pdb_files = pdb_files
-        self.lig_dbs = lig_dbs
+        self.receptor_pdb = receptor_pdb
+        self.drug_dbs = drug_dbs
         self.work_dir = work_dir
         self.output_path = os.path.abspath(output_path)
 
@@ -23,17 +20,18 @@ class diff_dock(object):
             os.makedirs(self.output_path)
 
     def prepare_inputs(self):
-        with open(self.lig_dbs, "r") as fp:
+        with open(self.drug_dbs, "r") as fp:
             smiless = [line.split()[0] for line in fp]
 
         self.all_runs = f"{self.output_path}/all.csv"
         with open(self.all_runs, "w") as out:
             out.write("protein_path,ligand\n")
-            for pdb_file in self.pdb_files:
-                output_pdb = os.path.join(self.output_path, os.path.basename(pdb_file))
-                pdb_file = clean_pdb(pdb_file, output_pdb)
-                for smiles in smiless:
-                    out.write(f"{pdb_file},{smiles}\n")
+            output_pdb = os.path.join(
+                self.output_path, os.path.basename(self.receptor_pdb)
+            )
+            pdb_file = clean_pdb(self.receptor_pdb, output_pdb)
+            for smiles in smiless:
+                out.write(f"{pdb_file},{smiles}\n")
 
     def run(self):
         self.prepare_inputs()
