@@ -119,13 +119,13 @@ class fred_dock(object):
             comp_u = mda.Merge(proteins.atoms, lig_u.atoms)
             comp_u.atoms.write(lig_pdb)
 
-    def run(self, n_cpus=1):
+    def run(self):
         os.chdir(self.run_dir)
 
         self.prepare_receptor()
         self.prepare_lig()
 
-        self.run_fred(n_cpus=n_cpus)
+        self.run_fred()
 
         self.prepare_report()
         if self.receptor_pdb.endswith("pdb"):
