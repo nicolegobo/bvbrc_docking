@@ -29,7 +29,7 @@ def _resolve_mkdir(value: Path) -> Path:
     """Create a directory if it does not exist (implements mkdir_validator)."""
     p = value.resolve()
     p.mkdir(exist_ok=False, parents=True)
-    return p
+    return p.absolute()
 
 
 def path_validator(field: str) -> classmethod:
@@ -154,6 +154,7 @@ def run_and_save(cmd, cwd=None, output_file=None):
         stdout=output_file,
         stderr=subprocess.STDOUT,
     )
+    process.wait()
     return process
 
 
