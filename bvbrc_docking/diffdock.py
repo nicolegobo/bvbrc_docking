@@ -8,26 +8,26 @@ from bvbrc_docking.utils import clean_pdb, comb_pdb, run_and_save, sdf2pdb
 
 class diff_dock(object):
     def __init__(
-        self, receptor_pdb, drug_dbs, work_dir, output_path, top_n: int = 1, **kwargs
+        self, receptor_pdb, drug_dbs, work_dir, output_dir, top_n: int = 1, **kwargs
     ) -> None:
         self.receptor_pdb = receptor_pdb
         self.drug_dbs = drug_dbs
         self.work_dir = work_dir
-        self.output_path = os.path.abspath(output_path)
+        self.output_dir = os.path.abspath(output_dir)
 
         self.top_n = top_n
-        if not os.path.exists(self.output_path):
-            os.makedirs(self.output_path)
+        if not os.path.exists(self.output_dir):
+            os.makedirs(self.output_dir)
 
     def prepare_inputs(self):
         with open(self.drug_dbs, "r") as fp:
             smiless = [line.split()[0] for line in fp]
 
-        self.all_runs = f"{self.output_path}/all.csv"
+        self.all_runs = f"{self.output_dir}/all.csv"
         with open(self.all_runs, "w") as out:
             out.write("protein_path,ligand\n")
             output_pdb = os.path.join(
-                self.output_path, os.path.basename(self.receptor_pdb)
+                self.output_dir, os.path.basename(self.receptor_pdb)
             )
             pdb_file = clean_pdb(self.receptor_pdb, output_pdb)
             for smiles in smiless:
@@ -46,7 +46,6 @@ class diff_dock(object):
             f"--out_file data/prepared_for_esm.fasta"
         )
         proc = run_and_save(cmd_getSeq, cwd=self.work_dir)
-        proc.wait()
 
         cmd_esm = (
             f"python {self.work_dir}/esm/scripts/extract.py "
@@ -54,24 +53,22 @@ class diff_dock(object):
             f"--repr_layers 33 --include per_tok --truncation_seq_length 30000"
         )
         proc = run_and_save(cmd_esm, cwd=self.work_dir)
-        proc.wait()
 
     def run_docking(self):
         cmd_diffdock = (
             f"python -m inference "
             f"--protein_ligand_csv {self.all_runs} "
-            f"--out_dir {self.output_path} "
+            f"--out_dir {self.output_dir} "
             f"--inference_steps 20 --samples_per_complex 40 --batch_size 6"
         )
         proc = run_and_save(cmd_diffdock, cwd=self.work_dir)
-        proc.wait()
 
     def post_process(self):
-        # result_paths = glob.glob(f"{self.output_path}/index*")
+        # result_paths = glob.glob(f"{self.output_dir}/index*")
         input_df = pd.read_csv(self.all_runs)
         output_df = []
         for i, row in input_df.iterrows():
-            result_path = f"{self.output_path}/index{i}_{row['protein_path'].replace('/', '-')}____{row['ligand']}"
+            result_path = f"{self.output_dir}/index{i}_{row['protein_path'].replace('/', '-')}____{row['ligand']}"
             print(result_path)
             for j in range(self.top_n):
                 sdf = glob.glob(
@@ -87,5 +84,5 @@ class diff_dock(object):
                 output_df.append(local_dict)
 
         output_df = pd.DataFrame(output_df)
-        output_df.to_csv(f"{self.output_path}/result.csv")
+        output_df.to_csv(f"{self.output_dir}/result.csv")
         return output_df

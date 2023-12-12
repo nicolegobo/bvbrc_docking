@@ -51,61 +51,65 @@ class fred_dock(object):
         Path name for the drug database smile file
     """
 
-    def __init__(self, receptor_pdb, drug_dbs, n_cpus: int = 1, fred_path="", **kwargs):
+    def __init__(
+        self,
+        receptor_pdb,
+        drug_dbs,
+        n_cpus: int = 1,
+        output_dir="./",
+        fred_path="",
+        **kwargs,
+    ):
         self.receptor_pdb = os.path.abspath(receptor_pdb)
         self.drug_dbs = os.path.abspath(drug_dbs)
-        self.n_cpus = n_cpus
-        self.fred_path = fred_path
+        self.n_cpus = int(n_cpus)
+        self.fred_path = "" if fred_path is None else fred_path
         self.label = os.path.basename(receptor_pdb).split(".")[0]
-        self.hostdir = os.path.abspath("./")
-        self.run_dir = f"{self.hostdir}/run_{self.label}"
+        self.output_dir = output_dir
+        self.run_dir = os.path.abspath(f"{self.output_dir}/run_{self.label}")
         os.makedirs(self.run_dir)
 
     def prepare_receptor(self):
         if self.receptor_pdb.endswith("oedu"):
             self.oe_receptor = self.receptor_pdb
         else:
-            spruce_cmd = f"spruce -in {self.receptor_pdb}"
-            process = run_and_save(spruce_cmd)
-            process.wait()
+            spruce_cmd = f"{self.fred_path}spruce -in {self.receptor_pdb}"
+            run_and_save(spruce_cmd, cwd=self.run_dir, output_file=self.log_handle)
 
             spruce_out = glob.glob(f"{self.run_dir}/{self.label.upper()}*.oedu")
             if spruce_out == []:
-                raise BaseException("spruce run failed...")
+                print(spruce_out)
+                raise BaseException(f"spruce run failed. No DU found in {self.run_dir}")
 
             self.oe_receptor = f"{self.run_dir}/{self.label}.oedu"
-            MKreceptor_cmd = f"receptorindu -in {spruce_out[0]} -out {self.oe_receptor}"
-            process = run_and_save(MKreceptor_cmd)
-            process.wait()
+            MKreceptor_cmd = f"{self.fred_path}receptorindu -in {spruce_out[0]} -out {self.oe_receptor}"
+            run_and_save(MKreceptor_cmd, cwd=self.run_dir, output_file=self.log_handle)
 
     def prepare_lig(self):
         if self.drug_dbs.endswith("oeb.gz"):
             self.oe_dbs = self.drug_dbs
         else:
             self.oe_dbs = f"{self.run_dir}/{self.label}.oeb.gz"
-            MKlig_cmd = f"oeomega classic -in {self.drug_dbs} -out {self.oe_dbs}"
-            process = run_and_save(MKlig_cmd)
-            process.wait()
+            MKlig_cmd = f"{self.fred_path}oeomega classic -in {self.drug_dbs} -out {self.oe_dbs}"
+            run_and_save(MKlig_cmd, cwd=self.run_dir, output_file=self.log_handle)
 
     def run_fred(self):
         self.oe_docked = f"{self.run_dir}/{self.label}_docked.oeb.gz"
-        fred_exec = "fred"
+        fred_exec = f"{self.fred_path}fred"
         if self.n_cpus > 1:
             fred_exec += f" -mpi_np {self.n_cpus}"
         fred_cmd = (
             f"{fred_exec} -receptor {self.oe_receptor} "
             f"-dbase {self.oe_dbs} -docked_molecule_file {self.oe_docked}"
         )
-        process = run_and_save(fred_cmd)
-        process.wait()
+        run_and_save(fred_cmd, cwd=self.run_dir, output_file=self.log_handle)
 
     def prepare_report(self):
         report_cmd = (
-            f"docking_report -docked_poses {self.oe_docked} "
+            f"{self.fred_path}docking_report -docked_poses {self.oe_docked} "
             f"-receptor {self.oe_receptor} -report_file {self.run_dir}/{self.label}.pdf"
         )
-        process = run_and_save(report_cmd)
-        process.wait()
+        run_and_save(report_cmd, cwd=self.run_dir, output_file=self.log_handle)
 
     def prepare_output(self):
         output_pdb = f"{self.run_dir}/{self.label}.pdb"
@@ -120,7 +124,8 @@ class fred_dock(object):
             comp_u.atoms.write(lig_pdb)
 
     def run(self):
-        os.chdir(self.run_dir)
+        log_file = f"{self.run_dir}/dock_log"
+        self.log_handle = open(log_file, "w")
 
         self.prepare_receptor()
         self.prepare_lig()
@@ -131,4 +136,4 @@ class fred_dock(object):
         if self.receptor_pdb.endswith("pdb"):
             self.prepare_output()
 
-        os.chdir(self.hostdir)
+        self.log_handle.close()
