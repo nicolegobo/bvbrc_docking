@@ -26,12 +26,10 @@ class fredPartialConfig(BaseModel):
 
 class DiffDockConfig(BaseModel):
     name: Literal["diffdock"] = "diffdock"
-    receptor_pdb: Optional[str] = Field(
-        ..., description="pdb path for the input protein"
-    )
+    receptor_pdb: str = Field(..., description="pdb path for the input protein")
     drug_dbs: str = Field(..., description="smi path for the ligands")
     work_dir: str = Field(..., description="installed path for diffdock")
-    output_path: str = Field(..., description="output path for the docking result")
+    output_dir: str = Field(..., description="output path for the docking result")
     top_n: Optional[int] = Field(
         ...,
         description="number of top N candidates for each protein-ligand pair",
@@ -44,7 +42,7 @@ class DiffDockPartialConfig(BaseModel):
     name: Literal["diffdock_partial"] = "diffdock_partial"
     drug_dbs: str = Field(..., description="smi path for the ligands")
     work_dir: str = Field(..., description="installed path for diffdock")
-    output_path: str = Field(..., description="output path for the docking result")
+    # output_dir: str = Field(..., description="output path for the docking result")
     top_n: Optional[int] = Field(
         ...,
         description="number of top N candidates for each protein-ligand pair",

@@ -73,7 +73,7 @@ class WorkstationSettings(BaseComputeSettings):
             retries=self.retries,
             executors=[
                 HighThroughputExecutor(
-                    address="localhost",
+                    address="127.0.0.1",
                     label=self.label,
                     cpu_affinity="block",
                     available_accelerators=self.available_accelerators,

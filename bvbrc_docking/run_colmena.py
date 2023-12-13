@@ -18,10 +18,10 @@ from bvbrc_docking.parsl import ComputeSettingsTypes
 from bvbrc_docking.utils import BaseModel, mkdir_validator, path_validator
 
 
-def run_docking(pdb_file, output_dir, dock_type="fred", **kwargs):
-    if dock_type == "fred":
+def run_docking(pdb_file, output_dir, dock_type: str = "fred", **kwargs):
+    if "fred" in dock_type:
         from bvbrc_docking.fred import fred_dock as docking
-    elif dock_type == "diffdock":
+    elif "diffdock" in dock_type:
         from bvbrc_docking.diffdock import diff_dock as docking
     dock = docking(receptor_pdb=pdb_file, output_dir=output_dir, **kwargs)
     dock.run()
@@ -85,6 +85,7 @@ class Thinker(BaseThinker):
 class WorkflowConfig(BaseModel):
     input_dir: Path = Field(..., description="Path to protein pdbs")
     output_dir: Path = Field(..., description="Path to the workflow output dir")
+    n_workers: int = Field(..., description="Number of workers")
     dock: DockConfig = Field(..., description="Docking config.")
     compute_settings: ComputeSettingsTypes
 
@@ -133,6 +134,7 @@ if __name__ == "__main__":
     my_run_docking = partial(
         run_docking,
         output_dir=dock_output,
+        dock_type=cfg.dock.name,
         **cfg.dock.dict(),
     )
     update_wrapper(my_run_docking, run_docking)
@@ -143,11 +145,11 @@ if __name__ == "__main__":
     result_logger = ResultLogger(cfg.output_dir / "result")
 
     logging.info("Loading proteins")
-    proteins = sorted(list(cfg.input_dir.glob("*.pdb")))
+    proteins = sorted(list(cfg.input_dir.glob("1A*.pdb")))
     thinker = Thinker(
         queue=queues,
         proteins=proteins,
-        n_workers=cfg.compute_settings.max_workers,
+        n_workers=cfg.n_workers,
         result_logger=result_logger,
     )
     logging.info("Created the task server and task generator")
