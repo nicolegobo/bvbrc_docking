@@ -1,0 +1,6 @@
+dock:
+  name: fred
+  receptor_pdb: /lambda_stor/homes/heng.ma/Research/BVBRC/docking/structures/1AH5.pdb
+  drug_dbs: /lambda_stor/homes/heng.ma/Research/BVBRC/docking/oe_fred/example/renin/all.smi
+  n_cpus: 4
+  fred_path: null

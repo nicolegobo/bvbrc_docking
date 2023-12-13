@@ -1,0 +1,14 @@
+input_dir: /lambda_stor/homes/heng.ma/Research/BVBRC/docking/structures/
+output_dir: ./run_dock
+n_workers: 10
+
+dock:
+  name: fred_partial
+  drug_dbs: /lambda_stor/homes/heng.ma/Research/BVBRC/docking/oe_fred/example/renin/all.smi
+  n_cpus: 4
+  fred_path: null
+
+compute_settings:
+  name: local
+  max_workers: 100
+  cores_per_worker: 4

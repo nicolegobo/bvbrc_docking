@@ -1,0 +1,13 @@
+input_dir: /lambda_stor/homes/heng.ma/Research/BVBRC/docking/structures/
+output_dir: ./run_diffdock
+n_workers: 5
+
+dock:
+  name: diffdock_partial
+  drug_dbs: /lambda_stor/homes/heng.ma/Research/BVBRC/docking/oe_fred/example/renin/all.smi
+  work_dir: /lambda_stor/homes/heng.ma/Research/BVBRC/docking/diffdock/DiffDock
+  top_n: 3
+
+compute_settings:
+  name: workstation
+  available_accelerators: [1, 3, 4, 5,7]
