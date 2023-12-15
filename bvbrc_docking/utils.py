@@ -147,6 +147,7 @@ def build_logger(debug=0):
 
 
 def run_and_save(cmd, cwd=None, output_file=None):
+    print(cmd, file=output_file)
     process = subprocess.Popen(
         cmd,
         shell=True,
@@ -193,7 +194,7 @@ def sdf2pdb(sdf_file, pdb_file=None):
     return pdb_file
 
 
-def clean_pdb(pdb_file, output_pdb=None):
+def clean_pdb(pdb_file, output_pdb: str) -> str:
     mda_u = mda.Universe(pdb_file)
     protein = mda_u.select_atoms("protein")
     protein.write(output_pdb)
