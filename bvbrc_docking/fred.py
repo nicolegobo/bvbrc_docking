@@ -5,7 +5,7 @@ from typing import Optional
 import MDAnalysis as mda
 from openeye import oechem
 
-from bvbrc_docking.utils import run_and_save
+from bvbrc_docking.utils import clean_pdb, run_and_save
 
 
 def oe_convert(input_file, output_file):
@@ -60,7 +60,6 @@ class fred_dock(object):
         fred_path="",
         **kwargs,
     ):
-        self.receptor_pdb = os.path.abspath(receptor_pdb)
         self.drug_dbs = os.path.abspath(drug_dbs)
         self.n_cpus = int(n_cpus)
         self.fred_path = "" if fred_path is None else fred_path
@@ -69,11 +68,33 @@ class fred_dock(object):
         self.run_dir = os.path.abspath(f"{self.output_dir}/run_{self.label}")
         os.makedirs(self.run_dir)
 
+        self.receptor_pdb = clean_pdb(
+            receptor_pdb, output_pdb=f"{self.run_dir}/{os.path.basename(receptor_pdb)}"
+        )
+        log_file = f"{self.run_dir}/dock_log"
+        self.log_handle = open(log_file, "w")
+
+    def find_pocket(self):
+        fpocket_cmd = f"fpocket -f {self.receptor_pdb}"
+        run_and_save(fpocket_cmd, cwd=self.run_dir, output_file=self.log_handle)
+
+        pocket_pdbs = glob.glob(
+            f"{self.run_dir}/{self.label}_out/pockets/pocket*_atm.pdb"
+        )
+        reslist = []
+        for pdb in pocket_pdbs:
+            pocket_u = mda.Universe(pdb)
+
+            for res in pocket_u.residues:
+                reslist += [f"{res.resname}:{res.resnum}: :{res.atoms[0].chainID}"]
+        return max(reslist, key=reslist.count)
+
     def prepare_receptor(self):
         if self.receptor_pdb.endswith("oedu"):
             self.oe_receptor = self.receptor_pdb
         else:
-            spruce_cmd = f"{self.fred_path}spruce -in {self.receptor_pdb}"
+            reslist = self.find_pocket()
+            spruce_cmd = f'{self.fred_path}spruce -site_residue "{reslist}" -in {self.receptor_pdb}'
             run_and_save(spruce_cmd, cwd=self.run_dir, output_file=self.log_handle)
 
             spruce_out = glob.glob(f"{self.run_dir}/{self.label.upper()}*.oedu")
@@ -112,21 +133,19 @@ class fred_dock(object):
         run_and_save(report_cmd, cwd=self.run_dir, output_file=self.log_handle)
 
     def prepare_output(self):
-        output_pdb = f"{self.run_dir}/{self.label}.pdb"
+        output_pdb = f"{self.run_dir}/{self.label}_ligs.pdb"
         oe_convert(self.oe_docked, output_pdb)
         lig_pdbs = pdb_split(output_pdb)
 
         pro_u = mda.Universe(self.receptor_pdb)
         proteins = pro_u.select_atoms("protein")
-        for lig_pdb in lig_pdbs:
+        for i, lig_pdb in enumerate(lig_pdbs):
             lig_u = mda.Universe(lig_pdb)
             comp_u = mda.Merge(proteins.atoms, lig_u.atoms)
-            comp_u.atoms.write(lig_pdb)
+            save_pdb = f"{self.run_dir}/{self.label}_{i}.pdb"
+            comp_u.atoms.write(save_pdb)
 
     def run(self):
-        log_file = f"{self.run_dir}/dock_log"
-        self.log_handle = open(log_file, "w")
-
         self.prepare_receptor()
         self.prepare_lig()
 
