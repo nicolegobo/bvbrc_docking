@@ -99,7 +99,7 @@ class fred_dock(object):
             self.oe_receptor = self.receptor_pdb
         else:
             reslist = self.find_pocket()
-            spruce_cmd = f'{self.fred_path}spruce -site_residue "{reslist}" -in {self.receptor_pdb}'
+            spruce_cmd = f'{self.fred_path}/spruce -site_residue "{reslist}" -in {self.receptor_pdb}'
             run_and_save(spruce_cmd, cwd=self.run_dir, output_file=self.log_handle)
 
             spruce_out = glob.glob(f"{self.run_dir}/{self.label.upper()}*.oedu")
@@ -108,7 +108,7 @@ class fred_dock(object):
                 raise BaseException(f"spruce run failed. No DU found in {self.run_dir}")
 
             self.oe_receptor = f"{self.run_dir}/{self.label}.oedu"
-            MKreceptor_cmd = f"{self.fred_path}receptorindu -in {spruce_out[0]} -out {self.oe_receptor}"
+            MKreceptor_cmd = f"{self.fred_path}/receptorindu -in {spruce_out[0]} -out {self.oe_receptor}"
             run_and_save(MKreceptor_cmd, cwd=self.run_dir, output_file=self.log_handle)
 
     def prepare_lig(self):
@@ -116,7 +116,7 @@ class fred_dock(object):
             self.oe_dbs = self.drug_dbs
         else:
             self.oe_dbs = f"{self.run_dir}/{self.label}.oeb.gz"
-            omega_exe = f"{self.fred_path}oeomega classic"
+            omega_exe = f"{self.fred_path}/oeomega classic"
             if self.n_cpus > 1:
                 omega_exe += f" -mpi_np {self.n_cpus}"
             MKlig_cmd = (
@@ -126,7 +126,7 @@ class fred_dock(object):
 
     def run_fred(self):
         self.oe_docked = f"{self.run_dir}/{self.label}_docked.oeb.gz"
-        fred_exec = f"{self.fred_path}fred"
+        fred_exec = f"{self.fred_path}/fred"
         if self.n_cpus > 1:
             fred_exec += f" -mpi_np {self.n_cpus}"
         fred_cmd = (
@@ -138,7 +138,7 @@ class fred_dock(object):
 
     def prepare_report(self):
         report_cmd = (
-            f"{self.fred_path}docking_report -docked_poses {self.oe_docked} "
+            f"{self.fred_path}/docking_report -docked_poses {self.oe_docked} "
             f"-receptor {self.oe_receptor} -report_file {self.run_dir}/{self.label}.pdf"
         )
         run_and_save(report_cmd, cwd=self.run_dir, output_file=self.log_handle)
