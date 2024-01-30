@@ -12,7 +12,9 @@ class fredConfig(BaseModel):
     )
     drug_dbs: str = Field(..., description="smi path for the ligands")
     n_cpus: int = Field(..., description="number of MPI threads")
-    fred_path: Optional[str]
+    fred_path: Optional[str] = Field(..., description="path to fred exec")
+    oe_license: Optional[str] = Field(..., description="openeye license")
+    hitlist_size: Optional[int] = Field(0, description="Number of top scoring mols")
 
 
 class fredPartialConfig(BaseModel):
@@ -22,6 +24,8 @@ class fredPartialConfig(BaseModel):
     drug_dbs: str = Field(..., description="smi path for the ligands")
     n_cpus: int = Field(..., description="number of MPI threads")
     fred_path: Optional[str] = Field(..., description="path to fred exec")
+    oe_license: Optional[str] = Field(..., description="openeye license")
+    hitlist_size: Optional[int] = Field(0, description="Number of top scoring mols")
 
 
 class DiffDockConfig(BaseModel):

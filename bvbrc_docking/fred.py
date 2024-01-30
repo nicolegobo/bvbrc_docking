@@ -58,11 +58,16 @@ class fred_dock(object):
         n_cpus: int = 1,
         output_dir="./",
         fred_path="",
+        oe_license="",
+        histlist_size=0,
         **kwargs,
     ):
         self.drug_dbs = os.path.abspath(drug_dbs)
         self.n_cpus = int(n_cpus)
         self.fred_path = "" if fred_path is None else fred_path
+        if oe_license is not None:
+            os.environ["OE_LICENSE"] = oe_license
+        self.histlist_size = histlist_size
         self.label = os.path.basename(receptor_pdb).split(".")[0]
         self.output_dir = output_dir
         self.run_dir = os.path.abspath(f"{self.output_dir}/run_{self.label}")
@@ -111,7 +116,12 @@ class fred_dock(object):
             self.oe_dbs = self.drug_dbs
         else:
             self.oe_dbs = f"{self.run_dir}/{self.label}.oeb.gz"
-            MKlig_cmd = f"{self.fred_path}oeomega classic -in {self.drug_dbs} -out {self.oe_dbs}"
+            omega_exe = f"{self.fred_path}oeomega classic"
+            if self.n_cpus > 1:
+                omega_exe += f" -mpi_np {self.n_cpus}"
+            MKlig_cmd = (
+                f"{omega_exe} -in {self.drug_dbs} -out {self.oe_dbs}  -useGPU false"
+            )
             run_and_save(MKlig_cmd, cwd=self.run_dir, output_file=self.log_handle)
 
     def run_fred(self):
@@ -121,7 +131,8 @@ class fred_dock(object):
             fred_exec += f" -mpi_np {self.n_cpus}"
         fred_cmd = (
             f"{fred_exec} -receptor {self.oe_receptor} "
-            f"-dbase {self.oe_dbs} -docked_molecule_file {self.oe_docked}"
+            f"-dbase {self.oe_dbs} -docked_molecule_file {self.oe_docked} "
+            f"-hitlist_size {self.histlist_size}"
         )
         run_and_save(fred_cmd, cwd=self.run_dir, output_file=self.log_handle)
 

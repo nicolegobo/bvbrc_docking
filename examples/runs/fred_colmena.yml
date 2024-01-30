@@ -6,7 +6,9 @@ dock:
   name: fred_partial
   drug_dbs: /lambda_stor/homes/heng.ma/Research/BVBRC/docking/oe_fred/example/renin/all.smi
   n_cpus: 4
-  fred_path: null
+  fred_path: /lambda_stor/homes/heng.ma/Research/BVBRC/docking/oe_fred/openeye/bin/
+  oe_license: /lambda_stor/homes/heng.ma/Research/BVBRC/docking/oe_fred/oe_license.txt
+  hitlist_size: 10
 
 compute_settings:
   name: local
