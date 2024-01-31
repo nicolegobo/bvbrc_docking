@@ -2,6 +2,6 @@ dock:
   name: diffdock
   receptor_pdb: /lambda_stor/homes/heng.ma/Research/BVBRC/docking/structures/1AH5.pdb
   drug_dbs: /lambda_stor/homes/heng.ma/Research/BVBRC/docking/oe_fred/example/renin/all.smi
-  work_dir: /lambda_stor/homes/heng.ma/Research/BVBRC/docking/diffdock/DiffDock
+  diffdock_dir: /lambda_stor/homes/heng.ma/Research/BVBRC/docking/diffdock/DiffDock
   output_dir: /lambda_stor/homes/heng.ma/Research/BVBRC/docking/bvbrc_docking/examples/run_1AH5_diffdock
   top_n: 3

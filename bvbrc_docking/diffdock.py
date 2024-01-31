@@ -8,12 +8,12 @@ from bvbrc_docking.utils import clean_pdb, comb_pdb, run_and_save, sdf2pdb
 
 class diff_dock(object):
     def __init__(
-        self, receptor_pdb, drug_dbs, work_dir, output_dir, top_n: int = 1, **kwargs
+        self, receptor_pdb, drug_dbs, diffdock_dir, output_dir, top_n: int = 1, **kwargs
     ) -> None:
         self.receptor_pdb = receptor_pdb
         self.label = os.path.basename(receptor_pdb).split(".")[0]
         self.drug_dbs = drug_dbs
-        self.work_dir = work_dir
+        self.diffdock_dir = diffdock_dir
         self.output_dir = os.path.abspath(output_dir)
         os.makedirs(self.output_dir, exist_ok=True)
 
@@ -47,30 +47,30 @@ class diff_dock(object):
 
     def get_esm_embeddings(self):
         cmd_getSeq = (
-            f"python {self.work_dir}/datasets/esm_embedding_preparation.py "
+            f"python {self.diffdock_dir}/datasets/esm_embedding_preparation.py "
             f"--protein_ligand_csv {self.all_runs} "
             f"--out_file {self.run_dir}/prepared_for_esm.fasta"
         )
-        proc = run_and_save(cmd_getSeq, cwd=self.work_dir, output_file=self.log_handle)
+        proc = run_and_save(cmd_getSeq, cwd=self.run_dir, output_file=self.log_handle)
 
         cmd_esm = (
-            f"python {self.work_dir}/esm/scripts/extract.py "
+            f"python {self.diffdock_dir}/esm/scripts/extract.py "
             f"esm2_t33_650M_UR50D {self.run_dir}/prepared_for_esm.fasta {self.run_dir}/esm2_output "
             f"--repr_layers 33 --include per_tok --truncation_seq_length 30000"
         )
-        proc = run_and_save(cmd_esm, cwd=self.work_dir, output_file=self.log_handle)
+        proc = run_and_save(cmd_esm, cwd=self.run_dir, output_file=self.log_handle)
 
     def run_docking(self):
         cmd_diffdock = (
-            f"python -m inference "
+            f"python {self.diffdock_dir}/inference.py "
             f"--protein_ligand_csv {self.all_runs} "
             f"--out_dir {self.run_dir} --esm_embeddings_path {self.run_dir}/esm2_output "
             f"--cache_path {self.run_dir}/cache "
+            f"--model_dir {self.diffdock_dir}/workdir/paper_score_model "
+            f"--confidence_model_dir {self.diffdock_dir}/workdir/paper_confidence_model "
             f"--inference_steps 20 --samples_per_complex 40 --batch_size 6"
         )
-        proc = run_and_save(
-            cmd_diffdock, cwd=self.work_dir, output_file=self.log_handle
-        )
+        proc = run_and_save(cmd_diffdock, cwd=self.run_dir, output_file=self.log_handle)
 
     def post_process(self):
         # result_paths = glob.glob(f"{self.run_dir}/index*")

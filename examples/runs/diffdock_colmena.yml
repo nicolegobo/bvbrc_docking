@@ -5,7 +5,7 @@ n_workers: 5
 dock:
   name: diffdock_partial
   drug_dbs: /lambda_stor/homes/heng.ma/Research/BVBRC/docking/oe_fred/example/renin/all.smi
-  work_dir: /lambda_stor/homes/heng.ma/Research/BVBRC/docking/diffdock/DiffDock
+  diffdock_dir: /lambda_stor/homes/heng.ma/Research/BVBRC/docking/diffdock/DiffDock
   top_n: 3
 
 compute_settings:
