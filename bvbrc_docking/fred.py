@@ -60,7 +60,7 @@ class fred_dock(object):
         output_dir="./",
         fred_path="",
         oe_license="",
-        histlist_size=0,
+        hitlist_size: int = 0,
         **kwargs,
     ):
         self.drug_dbs = os.path.abspath(drug_dbs)
@@ -68,7 +68,7 @@ class fred_dock(object):
         self.fred_path = "" if fred_path is None else fred_path
         if oe_license is not None:
             os.environ["OE_LICENSE"] = oe_license
-        self.histlist_size = histlist_size
+        self.hitlist_size = hitlist_size
         self.label = os.path.basename(receptor_pdb).split(".")[0]
         self.output_dir = output_dir
         self.run_dir = os.path.abspath(f"{self.output_dir}/run_{self.label}")
@@ -138,7 +138,7 @@ class fred_dock(object):
         fred_cmd = (
             f"{fred_exec} -receptor {self.oe_receptor} "
             f"-dbase {self.oe_dbs} -docked_molecule_file {self.oe_docked} "
-            f"-hitlist_size {self.histlist_size}"
+            f"-hitlist_size {self.hitlist_size}"
         )
         run_and_save(fred_cmd, cwd=self.run_dir, output_file=self.log_handle)
 
