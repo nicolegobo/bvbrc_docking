@@ -1,5 +1,6 @@
 import glob
 import os
+import shutil
 from typing import Optional
 
 import MDAnalysis as mda
@@ -73,9 +74,8 @@ class fred_dock(object):
         self.run_dir = os.path.abspath(f"{self.output_dir}/run_{self.label}")
         os.makedirs(self.run_dir)
 
-        self.receptor_pdb = clean_pdb(
-            receptor_pdb, output_pdb=f"{self.run_dir}/{os.path.basename(receptor_pdb)}"
-        )
+        self.receptor_pdb = f"{self.run_dir}/{os.path.basename(receptor_pdb)}"
+        shutil.copy2(receptor_pdb, self.receptor_pdb)
         log_file = f"{self.run_dir}/dock_log"
         self.log_handle = open(log_file, "w")
 
