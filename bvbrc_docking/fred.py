@@ -98,14 +98,20 @@ class fred_dock(object):
         if self.receptor_pdb.endswith("oedu"):
             self.oe_receptor = self.receptor_pdb
         else:
-            reslist = self.find_pocket()
-            spruce_cmd = f'{self.fred_path}/spruce -site_residue "{reslist}" -in {self.receptor_pdb}'
+            spruce_cmd = f"{self.fred_path}/spruce -in {self.receptor_pdb}"
             run_and_save(spruce_cmd, cwd=self.run_dir, output_file=self.log_handle)
 
             spruce_out = glob.glob(f"{self.run_dir}/{self.label.upper()}*.oedu")
             if spruce_out == []:
-                print(spruce_out)
-                raise BaseException(f"spruce run failed. No DU found in {self.run_dir}")
+                reslist = self.find_pocket()
+                spruce_cmd = f'{self.fred_path}/spruce -site_residue "{reslist}" -in {self.receptor_pdb}'
+                run_and_save(spruce_cmd, cwd=self.run_dir, output_file=self.log_handle)
+
+                spruce_out = glob.glob(f"{self.run_dir}/{self.label.upper()}*.oedu")
+                if spruce_out == []:
+                    raise BaseException(
+                        f"spruce run failed. No DU found in {self.run_dir}"
+                    )
 
             self.oe_receptor = f"{self.run_dir}/{self.label}.oedu"
             MKreceptor_cmd = f"{self.fred_path}/receptorindu -in {spruce_out[0]} -out {self.oe_receptor}"
