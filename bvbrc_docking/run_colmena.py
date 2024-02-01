@@ -145,7 +145,7 @@ if __name__ == "__main__":
     result_logger = ResultLogger(cfg.output_dir / "result")
 
     logging.info("Loading proteins")
-    proteins = sorted(list(cfg.input_dir.glob("1A*.pdb")))
+    proteins = sorted(list(cfg.input_dir.glob("*.pdb")))
     thinker = Thinker(
         queue=queues,
         proteins=proteins,
