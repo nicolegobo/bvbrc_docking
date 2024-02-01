@@ -29,6 +29,7 @@ Next we need to setup `DiffDock`, along with `esm`. The Diffdock uses the `esm` 
 ```bash
 git clone https://github.com/gcorso/DiffDock.git
 cd DiffDock
+git checkout a6c527536d286a693d1d6f9fc97142506ef76179
 git clone https://github.com/facebookresearch/esm
 cd esm
 git checkout ca8a710
