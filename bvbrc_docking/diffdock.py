@@ -1,6 +1,8 @@
+import time
 import glob
 import os
 
+import numpy as np
 import pandas as pd
 
 from bvbrc_docking.utils import clean_pdb, comb_pdb, run_and_save, sdf2pdb
@@ -38,10 +40,23 @@ class diff_dock(object):
         log_file = f"{self.run_dir}/diffdock_log"
         self.log_handle = open(log_file, "w")
 
+        t1 = time.time()
         self.prepare_inputs()
+        t2 = time.time()
         self.get_esm_embeddings()
+        t3 = time.time()
         self.run_docking()
+        t4 = time.time()
         self.post_process()
+        t5 = time.time()
+        #
+        # Summarize individual docks
+        #
+        with np.printoptions(precision=1, suppress=True):
+            dockinfo = np.load(f"{self.run_dir}/run_times.npy")
+            print(f"dock times: {np.array2string(dockinfo)}")
+            total_dock = np.sum(dockinfo)
+            print(f"prep={t2 - t1:.1f} sem={t3 - t2:.1f} dock={t4 - t3:.1f} dock_gpu={total_dock:.1f} post={t5-t4:.1f} total={t5 - t1:.1f}")
 
         self.log_handle.close()
 
