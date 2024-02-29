@@ -70,7 +70,7 @@ class diff_dock(object):
                  "embed": time_embed,
                  "dock": time_dock,
                  "dock_gpu_total": total_dock,
-                 "dock_gpu_per_ligand": numpy.asarray(dockinfo).tolist(),
+                 "dock_gpu_per_ligand": np.asarray(dockinfo).tolist(),
                  "total": time_total
                  };
 
