@@ -1,6 +1,7 @@
 import time
 import glob
 import os
+import sys
 
 import numpy as np
 import pandas as pd
@@ -52,13 +53,26 @@ class diff_dock(object):
         #
         # Summarize individual docks
         #
+
+        time_prep = t2 - t1
+        time_embed = t3 - t2
+        time_dock = t4 - t3
+        time_post = t5 - t4
+        time_total = t5 - t1
         with np.printoptions(precision=1, suppress=True):
             dockinfo = np.load(f"{self.run_dir}/run_times.npy")
             print(f"dock times: {np.array2string(dockinfo)}")
             total_dock = np.sum(dockinfo)
-            print(f"prep={t2 - t1:.1f} sem={t3 - t2:.1f} dock={t4 - t3:.1f} dock_gpu={total_dock:.1f} post={t5-t4:.1f} total={t5 - t1:.1f}")
+            print(f"prep={time_prep:.1f} embed={time_embed:.1f} dock={time_dock:.1f} dock_gpu={total_dock:.1f} post={time_post:.1f} total={time_total:.1f}")
 
         self.log_handle.close()
+        return { "prep": time_prep,
+                 "embed": time_embed,
+                 "dock": time_dock,
+                 "dock_gpu_total": total_dock,
+                 "dock_gpu_per_ligand": numpy.asarray(dockinfo).tolist(),
+                 "total": time_total
+                 };
 
     def get_esm_embeddings(self):
         cmd_getSeq = (
@@ -68,9 +82,18 @@ class diff_dock(object):
         )
         proc = run_and_save(cmd_getSeq, cwd=self.run_dir, output_file=self.log_handle)
 
+        model_def = os.getenv("BVDOC_ESM_MODEL")
+        if model_def is None:
+            model_def = "esm2_t33_650M_UR50D"
+        elif not os.path.exists(model_def):
+            print(f"Model path defined as {model_def} but that path does not exist", file=sys.stderr)
+            sys.exit(1)
+        else:
+            print(f"Using model path {model_def}")
+
         cmd_esm = (
             f"python {self.diffdock_dir}/esm/scripts/extract.py "
-            f"esm2_t33_650M_UR50D {self.run_dir}/prepared_for_esm.fasta {self.run_dir}/esm2_output "
+            f"{model_def} {self.run_dir}/prepared_for_esm.fasta {self.run_dir}/esm2_output "
             f"--repr_layers 33 --include per_tok --truncation_seq_length 30000"
         )
         proc = run_and_save(cmd_esm, cwd=self.run_dir, output_file=self.log_handle)
