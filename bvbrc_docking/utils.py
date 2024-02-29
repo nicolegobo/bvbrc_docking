@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import sys
 import shlex
 import subprocess
 from pathlib import Path
@@ -155,7 +156,10 @@ def run_and_save(cmd, cwd=None, output_file=None):
         stdout=output_file,
         stderr=subprocess.STDOUT,
     )
-    process.wait()
+    rc = process.wait()
+    if rc != 0:
+        print(f"Failure running f{cmd}", file=sys.stderr)
+        sys.exit(1)
     return process
 
 
