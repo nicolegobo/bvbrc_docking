@@ -158,7 +158,7 @@ def run_and_save(cmd, cwd=None, output_file=None):
     )
     rc = process.wait()
     if rc != 0:
-        print(f"Failure running f{cmd}", file=sys.stderr)
+        print(f"Failure running {cmd}", file=sys.stderr)
         sys.exit(1)
     return process
 
@@ -192,9 +192,20 @@ def comb_pdb(prot_pdb, lig_pdb, comp_pdb=None):
 def sdf2pdb(sdf_file, pdb_file=None):
     if pdb_file is None:
         pdb_file = sdf_file[:-3] + "pdb"
-    cmd = f"obabel -isdf {shlex.quote(sdf_file)} -opdb > {shlex.quote(pdb_file)}"
-    p = run_and_save(cmd)
-    p.wait()
+
+    cmd = ["obabel", "-isdf", sdf_file, "-opdb"]
+
+    with open(pdb_file, "w") as fh:
+        p = subprocess.Popen(cmd, shell = False, stdout = fh)
+        rc = p.wait()
+        if rc != 0:
+            print(f"Failure rc=f{rc} converting f{sdf_file} to f{pdb_file}")
+            sys.exit(1)
+
+    if os.path.getsize(pdb_file) == 0:
+        print(f"Failure (output is empty) converting f{sdf_file} to f{pdb_file}")
+        sys.exit(1)
+        
     return pdb_file
 
 

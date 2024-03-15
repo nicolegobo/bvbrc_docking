@@ -39,6 +39,8 @@ if __name__ == "__main__":
         from bvbrc_docking.fred import fred_dock as docking
     elif cfg.dock.name == "diffdock":
         from bvbrc_docking.diffdock import diff_dock as docking
+    elif cfg.dock.name == "diffdock_1_1":
+        from bvbrc_docking.diffdock_1_1 import diff_dock as docking
 
     dock = docking(**cfg.dock.dict())
     dock.run()
