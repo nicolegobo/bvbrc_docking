@@ -33,7 +33,11 @@ TPAGE_ARGS = --define kb_top=$(TARGET) --define kb_runtime=$(DEPLOY_RUNTIME) --d
 
 all: bin 
 
-bin: $(BIN_PERL) $(BIN_SERVICE_PERL) $(BIN_R) $(BIN_SERVICE_PYTHON)
+local_tools: $(BIN_DIR)/run_local_docking
+$(BIN_DIR)/run_local_docking: bvbrc_docking/run_local.py
+	KB_OVERRIDE_RUNTIME=$(BVDOCK_ENV) $(WRAP_PYTHON_SCRIPT) '$$KB_TOP/modules/$(CURRENT_DIR)/$<' $@
+
+bin: $(BIN_PERL) $(BIN_SERVICE_PERL) $(BIN_R) $(BIN_SERVICE_PYTHON) local_tools
 
 deploy: deploy-all
 deploy-all: deploy-client 
