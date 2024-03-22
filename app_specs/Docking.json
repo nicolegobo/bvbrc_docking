@@ -1,0 +1,57 @@
+{
+    "id": "Docking",
+    "script": "App-Docking",
+    "label": "Small molecule docking",
+    "description": "Dock small molecules into protein structures",
+  "default_memory": "100G",
+    "parameters": [
+        {
+            "id": "input_pdb",
+            "label": "PDB identifiers for input proteins",
+            "allow_multiple": true,
+            "required": 1,
+            "default": null,
+            "type": "array"
+        },
+	{
+	    "id": "ligand_library_type",
+	    "label": "Type of ligand library to use: named_library, smiles_list",
+	    "required": 1,
+	    "type": "string",
+	},
+	{
+	    "id": "ligand_named_library",
+	    "label": "Name of ligand library",
+	    "required": 0,
+	    "type": "string"
+	},
+	{
+	    "id": "ligand_smiles_list",
+	    "label": "Array of SMILES strings",
+	    "required": 0,
+	    "type": "array"
+	},
+	{
+	    "id": "top_n",
+	    "label": "Array of SMILES strings",
+	    "required": 0,
+	    "type": "array"
+	},
+        {
+            "id": "output_path",
+            "label": "Output Folder",
+            "required": 1,
+            "default": null,
+            "desc": "Path to which the output will be written. Defaults to the directory containing the input data.",
+            "type": "folder"
+        },
+        {
+            "id":"output_file",
+            "label":"File Basename",
+            "required": 1,
+            "default":null,
+            "desc":"Basename for the generated output files. Defaults to the basename of the input data.",
+            "type":"wsid"
+        }
+    ]
+}
