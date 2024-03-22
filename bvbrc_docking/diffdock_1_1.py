@@ -29,7 +29,7 @@ class diff_dock(object):
         self.drug_dbs = os.path.abspath(drug_dbs)
         self.diffdock_dir = os.path.abspath(diffdock_dir)
         self.output_dir = os.path.abspath(output_dir)
-        # os.makedirs(self.output_dir)
+        os.makedirs(self.output_dir)
 
         self.run_dir = self.output_dir
 
@@ -71,7 +71,7 @@ class diff_dock(object):
         self.log_handle = open(log_file, "w")
 
         input_set = self.prepare_inputs()
-        # self.run_docking()
+        self.run_docking()
         self.post_process(input_set)
 
         self.log_handle.close()
