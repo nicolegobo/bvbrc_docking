@@ -40,6 +40,18 @@ class DiffDockConfig(BaseModel):
     )
 
 
+class DiffDock11Config(BaseModel):
+    name: Literal["diffdock_1_1"] = "diffdock_1_1"
+    receptor_pdb: str = Field(..., description="pdb path for the input protein")
+    drug_dbs: str = Field(..., description="smi path for the ligands")
+    diffdock_dir: str = Field(..., description="installed path for diffdock")
+    output_dir: str = Field(..., description="output path for the docking result")
+    top_n: Optional[int] = Field(
+        ...,
+        description="number of top N candidates for each protein-ligand pair",
+    )
+
+
 class DiffDockPartialConfig(BaseModel):
     """used for colmena runs"""
 
@@ -53,4 +65,4 @@ class DiffDockPartialConfig(BaseModel):
     )
 
 
-DockConfig = Union[fredConfig, DiffDockConfig, fredPartialConfig, DiffDockPartialConfig]
+DockConfig = Union[fredConfig, DiffDockConfig, DiffDock11Config, fredPartialConfig, DiffDockPartialConfig]

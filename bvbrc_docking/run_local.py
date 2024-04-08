@@ -1,5 +1,7 @@
 import logging
 import sys
+import os
+import warnings
 from argparse import ArgumentParser
 
 from pydantic import Field
@@ -31,14 +33,36 @@ class WorkflowConfig(BaseModel):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("-c", "--config", required=True)
+    parser.add_argument("-c", "--config")
+    parser.add_argument("-n", "--name", choices=['diffdock', 'diffdock_1_1', 'fred'], default='diffdock_1_1')
+    parser.add_argument("-r", "--receptor-pdb")
+    parser.add_argument('-d', '--drug-dbs')
+    parser.add_argument('-D', '--diffdock-dir', default=os.getenv('BVDOCK_DIFFDOCK_DIR'))
+    parser.add_argument('-t', '--top-n', default=3)
+    parser.add_argument('output_dir')
+    
     args = parser.parse_args()
-    cfg = WorkflowConfig.from_yaml(args.config)
+
+    if args.config is None:
+        cfg = WorkflowConfig.from_args(args)
+    else:
+        cfg=WorkflowConfig.from_yaml(args.config)
 
     if cfg.dock.name == "fred":
         from bvbrc_docking.fred import fred_dock as docking
     elif cfg.dock.name == "diffdock":
         from bvbrc_docking.diffdock import diff_dock as docking
-
+    elif cfg.dock.name == "diffdock_1_1":
+        from bvbrc_docking.diffdock_1_1 import diff_dock as docking
+        
     dock = docking(**cfg.dock.dict())
+
+    warnings.filterwarnings("ignore", ".*guess.*", UserWarning)
+    warnings.filterwarnings("ignore", ".*Found no information.*", UserWarning)
+    warnings.filterwarnings("ignore", ".*Unit cell dimensions not found.*", UserWarning)
+    warnings.filterwarnings("ignore", ".*Found missing chainIDs.*", UserWarning)
+
     dock.run()
+    #    for w in wlist:
+    # print(f"message={w.message} cat={w.category} fn={w.filename} line={w.lineno}")
+

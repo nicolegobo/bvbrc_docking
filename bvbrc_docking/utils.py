@@ -1,12 +1,16 @@
 import json
 import logging
+import io
 import os
+import sys
 import shlex
 import subprocess
+import argparse
 from pathlib import Path
 from typing import Optional, Type, TypeVar, Union
 
 import MDAnalysis as mda
+from rdkit import Chem, RDLogger
 import yaml
 from pydantic import BaseModel as _BaseModel
 from pydantic import validator
@@ -107,6 +111,28 @@ class BaseModel(_BaseModel):
             raw_data = yaml.safe_load(fp)
         return cls(**raw_data)  # type: ignore
 
+    @classmethod
+    def from_args(cls: Type[T], args: argparse.Namespace) -> T:
+        """Load the model from an argparse result
+
+        Parameters
+        ----------
+        args: argparse.Namespace
+            The argparse argument set.
+
+        Returns
+        -------
+        T
+            A specific BaseModel instance.
+        """
+        v = {}
+        adict = vars(args)
+        raw = {'dock': v}
+        for key in ['name', 'receptor_pdb', 'drug_dbs', 'diffdock_dir', 'output_dir', 'top_n']:
+            if key in args:
+                v[key] = adict[key]
+        return cls(**raw)  # type: ignore
+
 
 three_to_one = {
     "ALA": "A",
@@ -155,7 +181,10 @@ def run_and_save(cmd, cwd=None, output_file=None):
         stdout=output_file,
         stderr=subprocess.STDOUT,
     )
-    process.wait()
+    rc = process.wait()
+    if rc != 0:
+        print(f"Failure running {cmd}", file=sys.stderr)
+        sys.exit(1)
     return process
 
 
@@ -176,21 +205,40 @@ def get_pdblabel(pdb_file) -> str:
 
 
 def comb_pdb(prot_pdb, lig_pdb, comp_pdb=None):
+    if comp_pdb is None:
+        comp_pdb = f"{os.path.dirname(lig_pdb)}/{get_pdblabel(prot_pdb)}_{get_pdblabel(lig_pdb)}.pdb"
+    if os.path.exists(comp_pdb):
+        os.remove(comp_pdb)
+        
     prot_u = mda.Universe(prot_pdb)
     lig_u = mda.Universe(lig_pdb)
     merged = mda.Merge(prot_u.atoms, lig_u.atoms)
-    if comp_pdb is None:
-        comp_pdb = f"{os.path.dirname(lig_pdb)}/{get_pdblabel(prot_pdb)}_{get_pdblabel(lig_pdb)}.pdb"
     merged.atoms.write(comp_pdb)
     return comp_pdb
-
 
 def sdf2pdb(sdf_file, pdb_file=None):
     if pdb_file is None:
         pdb_file = sdf_file[:-3] + "pdb"
-    cmd = f"obabel -isdf {shlex.quote(sdf_file)} -opdb > {shlex.quote(pdb_file)}"
-    p = run_and_save(cmd)
-    p.wait()
+
+    if os.path.exists(pdb_file):
+        os.remove(pdb_file)
+
+    cmd = ["obabel", "-isdf", sdf_file, "-opdb"]
+
+    with open(pdb_file, "w") as fh:
+
+        # Babel emits a diagnostic that it did a conversion. Swallow that.
+        p = subprocess.Popen(cmd, shell = False, stdout = fh, stderr=subprocess.PIPE)
+        rc = p.wait()
+        err = p.stderr.read()
+        if rc != 0:
+            print(f"Failure rc=f{rc} converting f{sdf_file} to f{pdb_file}: {err}")
+            sys.exit(1)
+
+    if os.path.getsize(pdb_file) == 0:
+        print(f"Failure (output is empty) converting f{sdf_file} to f{pdb_file} err={err}")
+        sys.exit(1)
+        
     return pdb_file
 
 
@@ -199,3 +247,16 @@ def clean_pdb(pdb_file, output_pdb: str) -> str:
     protein = mda_u.select_atoms("protein")
     protein.write(output_pdb)
     return output_pdb
+
+#
+# verify that a smiles string is a smiles string.
+#
+
+def validate_smiles(smiles_str):
+    is_valid = False
+    RDLogger.DisableLog('rdApp.error')
+    if Chem.MolFromSmiles(smiles_str) is not None:
+        is_valid = True
+    RDLogger.EnableLog('rdApp.error')
+
+    return is_valid
