@@ -1,19 +1,21 @@
+import argparse
+import io
 import json
 import logging
-import io
 import os
-import sys
 import shlex
 import subprocess
-import argparse
+import sys
+import tempfile
 from pathlib import Path
 from typing import Optional, Type, TypeVar, Union
 
 import MDAnalysis as mda
-from rdkit import Chem, RDLogger
 import yaml
+from openbabel import pybel
 from pydantic import BaseModel as _BaseModel
 from pydantic import validator
+from rdkit import Chem, RDLogger
 
 T = TypeVar("T")
 PathLike = Union[str, Path]
@@ -127,8 +129,15 @@ class BaseModel(_BaseModel):
         """
         v = {}
         adict = vars(args)
-        raw = {'dock': v}
-        for key in ['name', 'receptor_pdb', 'drug_dbs', 'diffdock_dir', 'output_dir', 'top_n']:
+        raw = {"dock": v}
+        for key in [
+            "name",
+            "receptor_pdb",
+            "drug_dbs",
+            "diffdock_dir",
+            "output_dir",
+            "top_n",
+        ]:
             if key in args:
                 v[key] = adict[key]
         return cls(**raw)  # type: ignore
@@ -209,12 +218,13 @@ def comb_pdb(prot_pdb, lig_pdb, comp_pdb=None):
         comp_pdb = f"{os.path.dirname(lig_pdb)}/{get_pdblabel(prot_pdb)}_{get_pdblabel(lig_pdb)}.pdb"
     if os.path.exists(comp_pdb):
         os.remove(comp_pdb)
-        
+
     prot_u = mda.Universe(prot_pdb)
     lig_u = mda.Universe(lig_pdb)
     merged = mda.Merge(prot_u.atoms, lig_u.atoms)
     merged.atoms.write(comp_pdb)
     return comp_pdb
+
 
 def sdf2pdb(sdf_file, pdb_file=None):
     if pdb_file is None:
@@ -228,7 +238,7 @@ def sdf2pdb(sdf_file, pdb_file=None):
     with open(pdb_file, "w") as fh:
 
         # Babel emits a diagnostic that it did a conversion. Swallow that.
-        p = subprocess.Popen(cmd, shell = False, stdout = fh, stderr=subprocess.PIPE)
+        p = subprocess.Popen(cmd, shell=False, stdout=fh, stderr=subprocess.PIPE)
         rc = p.wait()
         err = p.stderr.read()
         if rc != 0:
@@ -236,9 +246,11 @@ def sdf2pdb(sdf_file, pdb_file=None):
             sys.exit(1)
 
     if os.path.getsize(pdb_file) == 0:
-        print(f"Failure (output is empty) converting f{sdf_file} to f{pdb_file} err={err}")
+        print(
+            f"Failure (output is empty) converting f{sdf_file} to f{pdb_file} err={err}"
+        )
         sys.exit(1)
-        
+
     return pdb_file
 
 
@@ -248,15 +260,33 @@ def clean_pdb(pdb_file, output_pdb: str) -> str:
     protein.write(output_pdb)
     return output_pdb
 
+
 #
 # verify that a smiles string is a smiles string.
 #
 
+
 def validate_smiles(smiles_str):
     is_valid = False
-    RDLogger.DisableLog('rdApp.error')
+    RDLogger.DisableLog("rdApp.error")
     if Chem.MolFromSmiles(smiles_str) is not None:
         is_valid = True
-    RDLogger.EnableLog('rdApp.error')
+    RDLogger.EnableLog("rdApp.error")
 
     return is_valid
+
+
+def cal_cnn_aff(pdb_file, sdf_file, gnina_exe="gnina", log_handle=None):
+    tempdir = tempfile.TemporaryDirectory()
+
+    output_sdf = f"{tempdir.name}/{os.path.basename(sdf_file)}"
+    cmd = (
+        f"{gnina_exe} --minimize --scoring vinardo "
+        f"-r {pdb_file} -l {sdf_file} "
+        f"--autobox_ligand {sdf_file}  "
+        f"--autobox_add 2 -o {output_sdf} "
+    )
+    run_and_save(cmd, output_file=log_handle)
+
+    mol = next(pybel.readfile("sdf", output_sdf))
+    return mol

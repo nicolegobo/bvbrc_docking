@@ -8,17 +8,25 @@
 # in the BVDOCK_DIFFDOCK_DIR environment variable.
 #
 
-import time
 import glob
 import os
-import sys
 import re
+import sys
+import time
 from operator import itemgetter
 
 import numpy as np
 import pandas as pd
 
-from bvbrc_docking.utils import clean_pdb, comb_pdb, run_and_save, sdf2pdb, validate_smiles
+from bvbrc_docking.utils import (
+    cal_cnn_aff,
+    clean_pdb,
+    comb_pdb,
+    run_and_save,
+    sdf2pdb,
+    validate_smiles,
+)
+
 
 class diff_dock(object):
     def __init__(
@@ -53,17 +61,19 @@ class diff_dock(object):
                         continue
                 inputs.append([ident, smiles_str])
         if failed:
-            print(f"Failure f{failed} parsing smiles strings from input file f{self.drug_dbs}")
+            print(
+                f"Failure f{failed} parsing smiles strings from input file f{self.drug_dbs}"
+            )
             os.exit(1)
-            
+
         output_pdb = os.path.join(self.run_dir, os.path.basename(self.receptor_pdb))
-        pdb_file = clean_pdb(self.receptor_pdb, output_pdb)
+        self.pdb_file = clean_pdb(self.receptor_pdb, output_pdb)
 
         self.all_runs = f"{self.run_dir}/all.csv"
         with open(self.all_runs, "w") as out:
             out.write("protein_path,ligand_description,complex_name,protein_sequence\n")
             for ident, smiles_str in inputs:
-                out.write(f"{pdb_file},{smiles_str},{ident}\n")
+                out.write(f"{self.pdb_file},{smiles_str},{ident}\n")
         return inputs
 
     def run(self):
@@ -86,11 +96,13 @@ class diff_dock(object):
         # the run failed with the original diffdock 1.0 parameters used:
         # f"--inference_steps 20 --samples_per_complex 40 --batch_size 6"
 
-        proc = run_and_save(cmd_diffdock, cwd=self.diffdock_dir, output_file=self.log_handle)
+        proc = run_and_save(
+            cmd_diffdock, cwd=self.diffdock_dir, output_file=self.log_handle
+        )
 
     def post_process(self, input_set):
         #
-        # Results are in directories named by the identifiers 
+        # Results are in directories named by the identifiers
         #
 
         for ident, smiles_str in input_set:
@@ -98,11 +110,13 @@ class diff_dock(object):
             result_path = f"{self.run_dir}/{ident}"
 
             for file in os.listdir(result_path):
-               m = re.match(r'rank(\d+)_confidence-(\d+\.\d+).sdf', file)
-               if m:
-                    rank, confidence = m.group(1,2)
+                m = re.match(r"rank(\d+)_confidence-(\d+\.\d+).sdf", file)
+                if m:
+                    rank, confidence = m.group(1, 2)
                     rank = int(rank)
-                    by_rank.insert(0, [ident, os.path.join(result_path, file), rank, confidence])
+                    by_rank.insert(
+                        0, [ident, os.path.join(result_path, file), rank, confidence]
+                    )
 
             by_rank.sort(key=itemgetter(2))
 
@@ -112,20 +126,48 @@ class diff_dock(object):
                 #
                 # For the final output, we combine each of the
                 # docked ligand with the original PDF for easy viewing
-                #	
+                #
                 # We need to convert the sdf to pdb first.
                 #
-                pdb_file = sdf2pdb(file)
-            
-                combined = comb_pdb(self.receptor_pdb, pdb_file)
+                lig_pdb = sdf2pdb(file)
+
+                combined = comb_pdb(self.pdb_file, lig_pdb)
                 ent.append(combined)
 
             with open(f"{result_path}/result.csv", "w") as fp:
-                print("\t".join(['ident', 'rank', 'score', 'lig_sdf', 'comb_pdb']), file=fp)
+                print(
+                    "\t".join(
+                        [
+                            "ident",
+                            "rank",
+                            "score",
+                            "lig_sdf",
+                            "comb_pdb",
+                            "CNNscore",
+                            "CNNaffinity",
+                            "Vinardo",
+                        ]
+                    ),
+                    file=fp,
+                )
                 for ident, path, rank, confidence, combined_path in by_rank:
-                    print("\t".join([ident, str(rank), str(confidence),
-                                     os.path.basename(path), os.path.basename(combined_path)]), file=fp)
-            
+                    mol = cal_cnn_aff(self.pdb_file, path, f"{self.diffdock_dir}/gnina")
+                    print(
+                        "\t".join(
+                            [
+                                ident,
+                                str(rank),
+                                str(confidence),
+                                os.path.basename(path),
+                                os.path.basename(combined_path),
+                                str(mol.data["CNNscore"]),
+                                str(mol.data["CNNaffinity"]),
+                                str(mol.data["minimizedAffinity"]),
+                            ]
+                        ),
+                        file=fp,
+                    )
+
         #     for j in range(self.top_n):
         #         sdf = glob.glob(
         #             f"{glob.escape(result_path)}/rank{j+1}_confidence-*.sdf"

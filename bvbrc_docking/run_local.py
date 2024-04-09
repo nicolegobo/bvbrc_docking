@@ -1,6 +1,6 @@
 import logging
-import sys
 import os
+import sys
 import warnings
 from argparse import ArgumentParser
 
@@ -34,19 +34,27 @@ class WorkflowConfig(BaseModel):
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("-c", "--config")
-    parser.add_argument("-n", "--name", choices=['diffdock', 'diffdock_1_1', 'fred'], default='diffdock_1_1')
+    parser.add_argument(
+        "-n",
+        "--name",
+        choices=["diffdock", "diffdock_1_1", "fred"],
+        default="diffdock_1_1",
+    )
     parser.add_argument("-r", "--receptor-pdb")
-    parser.add_argument('-d', '--drug-dbs')
-    parser.add_argument('-D', '--diffdock-dir', default=os.getenv('BVDOCK_DIFFDOCK_DIR'))
-    parser.add_argument('-t', '--top-n', default=3)
-    parser.add_argument('output_dir')
-    
+    parser.add_argument("-d", "--drug-dbs")
+    parser.add_argument(
+        "-D", "--diffdock-dir", default=os.getenv("BVDOCK_DIFFDOCK_DIR")
+    )
+    parser.add_argument("-t", "--top-n", default=3)
+    parser.add_argument("output_dir")
+    # parser.add_argument("-o", "--output_dir", default="./xout")
+
     args = parser.parse_args()
 
     if args.config is None:
         cfg = WorkflowConfig.from_args(args)
     else:
-        cfg=WorkflowConfig.from_yaml(args.config)
+        cfg = WorkflowConfig.from_yaml(args.config)
 
     if cfg.dock.name == "fred":
         from bvbrc_docking.fred import fred_dock as docking
@@ -54,7 +62,7 @@ if __name__ == "__main__":
         from bvbrc_docking.diffdock import diff_dock as docking
     elif cfg.dock.name == "diffdock_1_1":
         from bvbrc_docking.diffdock_1_1 import diff_dock as docking
-        
+
     dock = docking(**cfg.dock.dict())
 
     warnings.filterwarnings("ignore", ".*guess.*", UserWarning)
@@ -65,4 +73,3 @@ if __name__ == "__main__":
     dock.run()
     #    for w in wlist:
     # print(f"message={w.message} cat={w.category} fn={w.filename} line={w.lineno}")
-
