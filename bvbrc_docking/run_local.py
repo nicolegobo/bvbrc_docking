@@ -56,6 +56,9 @@ if __name__ == "__main__":
     else:
         cfg = WorkflowConfig.from_yaml(args.config)
 
+    cfg.configure_logging()
+    logging.info(f"Starting Docking run for {cfg.dock.receptor_pdb}")
+
     if cfg.dock.name == "fred":
         from bvbrc_docking.fred import fred_dock as docking
     elif cfg.dock.name == "diffdock":
@@ -71,5 +74,6 @@ if __name__ == "__main__":
     warnings.filterwarnings("ignore", ".*Found missing chainIDs.*", UserWarning)
 
     dock.run()
+    logging.info(f"Finished Docking run for {cfg.dock.receptor_pdb}")
     #    for w in wlist:
     # print(f"message={w.message} cat={w.category} fn={w.filename} line={w.lineno}")

@@ -48,6 +48,7 @@ class diff_dock(object):
         failed = 0
         with open(self.drug_dbs, "r") as fp:
             for line in fp:
+                # add support for single col of smile strings HM
                 ident, smiles_str = line.split()
                 if not validate_smiles(smiles_str):
                     #
@@ -151,7 +152,12 @@ class diff_dock(object):
                     file=fp,
                 )
                 for ident, path, rank, confidence, combined_path in by_rank:
-                    mol = cal_cnn_aff(self.pdb_file, path, f"{self.diffdock_dir}/gnina")
+                    mol = cal_cnn_aff(
+                        self.pdb_file,
+                        path,
+                        f"{self.diffdock_dir}/gnina",
+                        log_handle=self.log_handle,
+                    )
                     print(
                         "\t".join(
                             [
