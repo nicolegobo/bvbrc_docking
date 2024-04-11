@@ -222,8 +222,12 @@ def comb_pdb(prot_pdb, lig_pdb, comp_pdb=None):
     prot_u = mda.Universe(prot_pdb)
     lig_u = mda.Universe(lig_pdb)
     merged = mda.Merge(prot_u.atoms, lig_u.atoms)
-    merged.atoms.write(comp_pdb)
-    return comp_pdb
+    try:
+        merged.atoms.write(comp_pdb)
+        return comp_pdb
+    except Exception as e:
+        logging.info(f"Skipping {lig_pdb} for position error {e}. ")
+        return None
 
 
 def sdf2pdb(sdf_file, pdb_file=None):

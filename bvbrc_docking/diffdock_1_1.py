@@ -30,14 +30,24 @@ from bvbrc_docking.utils import (
 
 class diff_dock(object):
     def __init__(
-        self, receptor_pdb, drug_dbs, diffdock_dir, output_dir, top_n: int = 1, **kwargs
+        self,
+        receptor_pdb,
+        drug_dbs,
+        diffdock_dir,
+        output_dir,
+        top_n: int = 1,
+        cont_run=False,
+        **kwargs,
     ) -> None:
         self.receptor_pdb = os.path.abspath(receptor_pdb)
         self.label = os.path.basename(receptor_pdb).split(".")[0]
         self.drug_dbs = os.path.abspath(drug_dbs)
         self.diffdock_dir = os.path.abspath(diffdock_dir)
         self.output_dir = os.path.abspath(output_dir)
-        os.makedirs(self.output_dir)
+        if cont_run:
+            os.makedirs(self.output_dir, exist_ok=True)
+        else:
+            os.makedirs(self.output_dir)
 
         self.run_dir = self.output_dir
 
@@ -124,6 +134,11 @@ class diff_dock(object):
             for idx, ent in enumerate(by_rank):
                 print(f"idx={idx} ent={ent}")
                 ident, file, rank, confidence = ent
+
+                # skip large score poses
+                if float(rank) > 100:
+                    print(f"Skipping {file} for large confidence score {confidence}. ")
+                    continue
                 #
                 # For the final output, we combine each of the
                 # docked ligand with the original PDF for easy viewing
@@ -133,6 +148,9 @@ class diff_dock(object):
                 lig_pdb = sdf2pdb(file)
 
                 combined = comb_pdb(self.pdb_file, lig_pdb)
+                if combined is None:
+                    by_rank.pop(idx)
+                    continue
                 ent.append(combined)
 
             with open(f"{result_path}/result.csv", "w") as fp:
