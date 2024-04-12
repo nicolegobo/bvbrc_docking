@@ -17,6 +17,7 @@ from operator import itemgetter
 
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 from bvbrc_docking.utils import (
     cal_cnn_aff,
@@ -116,7 +117,7 @@ class diff_dock(object):
         # Results are in directories named by the identifiers
         #
 
-        for ident, smiles_str in input_set:
+        for ident, smiles_str in tqdm(input_set):
             by_rank = []
             result_path = f"{self.run_dir}/{ident}"
 
@@ -125,33 +126,46 @@ class diff_dock(object):
                 if m:
                     rank, confidence = m.group(1, 2)
                     rank = int(rank)
-                    by_rank.insert(
-                        0, [ident, os.path.join(result_path, file), rank, confidence]
-                    )
+                    if float(confidence) > 100:
+                        continue
+
+                    # convert ligand sdf to complex with protein
+                    sdf_file = os.path.join(result_path, file)
+                    lig_pdb = sdf2pdb(sdf_file)
+                    combined = comb_pdb(self.pdb_file, lig_pdb)
+                    if combined is None:
+                        continue
+                    else:
+                        by_rank.insert(
+                            0,
+                            [
+                                ident,
+                                os.path.join(result_path, file),
+                                rank,
+                                confidence,
+                                combined,
+                            ],
+                        )
 
             by_rank.sort(key=itemgetter(2))
 
-            for idx, ent in enumerate(by_rank):
-                print(f"idx={idx} ent={ent}")
-                ident, file, rank, confidence = ent
+            # for idx, ent in enumerate(by_rank):
+            #     print(f"idx={idx} ent={ent}")
+            #     ident, file, rank, confidence = ent
 
-                # skip large score poses
-                if float(rank) > 100:
-                    print(f"Skipping {file} for large confidence score {confidence}. ")
-                    continue
-                #
-                # For the final output, we combine each of the
-                # docked ligand with the original PDF for easy viewing
-                #
-                # We need to convert the sdf to pdb first.
-                #
-                lig_pdb = sdf2pdb(file)
+            #     #
+            #     # For the final output, we combine each of the
+            #     # docked ligand with the original PDF for easy viewing
+            #     #
+            #     # We need to convert the sdf to pdb first.
+            #     #
+            #     lig_pdb = sdf2pdb(file)
 
-                combined = comb_pdb(self.pdb_file, lig_pdb)
-                if combined is None:
-                    by_rank.pop(idx)
-                    continue
-                ent.append(combined)
+            #     combined = comb_pdb(self.pdb_file, lig_pdb)
+            #     if combined is None:
+            #         by_rank.remove(ent)
+            #         continue
+            #     ent.append(combined)
 
             with open(f"{result_path}/result.csv", "w") as fp:
                 print(
