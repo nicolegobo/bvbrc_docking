@@ -183,9 +183,10 @@ def build_logger(debug=0):
 
 def run_and_save(cmd, cwd=None, output_file=None):
     print(cmd, file=output_file)
+    cmd = cmd.split(" ")
     process = subprocess.Popen(
         cmd,
-        shell=True,
+        shell=False,
         cwd=cwd,
         stdout=output_file,
         stderr=subprocess.STDOUT,
@@ -237,19 +238,10 @@ def sdf2pdb(sdf_file, pdb_file=None):
     if os.path.exists(pdb_file):
         os.remove(pdb_file)
 
-    cmd = ["obabel", "-isdf", sdf_file, "-opdb"]
-
-    with open(pdb_file, "w") as fh:
-
-        # Babel emits a diagnostic that it did a conversion. Swallow that.
-        p = subprocess.Popen(cmd, shell=False, stdout=fh, stderr=subprocess.PIPE)
-        rc = p.wait()
-        err = p.stderr.read()
-        if rc != 0:
-            print(f"Failure rc=f{rc} converting f{sdf_file} to f{pdb_file}: {err}")
-            sys.exit(1)
-
-    if os.path.getsize(pdb_file) == 0:
+    try:
+        mol = next(pybel.readfile("sdf", sdf_file))
+        mol.write("pdb", pdb_file)
+    except Exception as err:
         print(
             f"Failure (output is empty) converting f{sdf_file} to f{pdb_file} err={err}"
         )
