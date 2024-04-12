@@ -125,7 +125,11 @@ class diff_dock(object):
                 m = re.match(r"rank(\d+)_confidence-(\d+\.\d+).sdf", file)
                 if m:
                     rank, confidence = m.group(1, 2)
+
+                    # skip high score and rank
                     rank = int(rank)
+                    if self.top_n != 0 & rank > self.top_n:
+                        continue
                     if float(confidence) > 100:
                         continue
 
