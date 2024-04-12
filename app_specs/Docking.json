@@ -33,9 +33,9 @@
 	},
 	{
 	    "id": "top_n",
-	    "label": "Array of SMILES strings",
+	    "label": "Return the top N results",
 	    "required": 0,
-	    "type": "array"
+	    "type": "int"
 	},
         {
             "id": "output_path",
