@@ -1,0 +1,86 @@
+<h1>Docking Report</h1>
+
+The following proteins were docked against [% n_ligands %] ligands using the DiffDock docking tool <cite>[1]</cite>. The links below take you to the subsection of the
+report for the given protein. <p>
+For each docking result for a given protein and ligand we provide the following statistics:
+<dl>
+<dt>Rank</dt>
+<dd>The relative rank of this result as assigned by DiffDock</dd>
+
+<dt>Confidence score</dt>
+<dd>Confidence score of this result as assigned by DiffDock</dd>
+
+<dt>CNN Score</dt>
+<dd>CNN score of this result as assigned by Gnina <cite>[2]</cite></dd>
+
+<dt>CNN Affinity</dt>
+<dd>CNN affinity of this result as assigned by Gnina</dd>
+
+<dt>Vinardo Score</dt>
+<dd>Vinardo score of this result as assigned by Gnina</dd>
+
+</dl>
+
+
+<table border="1">
+<tr>
+<th>PDB ID</th>
+<th>Gene</th>
+<th>Method</th>
+<th>BV-BRC ID</th>
+<th>Product</th>
+</tr>
+[% FOR prot IN proteins -%]
+<tr>
+<td><a href="#[% prot.pdb_id %]">[% prot.pdb_id %]</a></td>
+<td>[% prot.gene.join(", ") %]</td>
+<td>[% prot.method.join(", ") %]</td>
+<td><a href="https://www.bv-brc.org/view/Feature/[% prot.patric_id %]" target="blank"></a>[% prot.patric_id %]</td>
+<td>[% prot.product.0 %]</td>
+</tr>
+[% END -%]
+</table>
+
+[% FOR prot IN proteins -%]
+<hr>
+<h2>[% prot.pdb_id %]: [% prot.title %]</h2>
+
+[% FOR ligand IN ligand_info -%]
+<h3>[% ligand.id %]: [% ligand.smiles %]</h3>
+
+Ranked docking conformations:<p>
+<table>
+<tr>
+<th>Rank</th>
+<th>Confidence</th>
+<th>CNN Score</th>
+<th>CNN Affinity</th>
+<th>Vinardo</th>
+</tr>
+[% FOR res IN results.${prot.pdb_id}.${ligand.id} %]
+<tr>
+<td><a href="[% structure_base %]=[% output_folder %]/[% res.output_folder %]/[% res.comb_pdb %]">[% res.rank %]</a></td>
+<td>[% res.score %]</td>
+<td>[% res.CNNscore FILTER format("%.2f")  %]</td>
+<td>[% res.CNNaffinity FILTER format("%.2f") %]</td>
+<td>[% res.Vinardo FILTER format("%.2f") %]</td>
+</tr>
+[% END %]
+</table>
+[% END -%]
+[% END -%]
+
+<h3>References</h3>
+
+1. Corso, Gabriele, Arthur Deng, Benjamin Fry, Nicholas Polizzi, Regina
+Barzilay, and Tommi Jaakkola. "Deep Confident Steps to New Pockets:
+Strategies for Docking Generalization." arXiv preprint
+arXiv:2402.18396 (2024).<p>
+
+2. McNutt, Andrew T., Paul Francoeur, Rishal Aggarwal, Tomohide Masuda,
+Rocco Meli, Matthew Ragoza, Jocelyn Sunseri, and David Ryan
+Koes. "GNINA 1.0: molecular docking with deep learning." Journal of
+cheminformatics 13, no. 1 (2021): 43.<p>
+
+
+
