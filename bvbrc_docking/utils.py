@@ -183,7 +183,7 @@ def build_logger(debug=0):
 
 def run_and_save(cmd, cwd=None, output_file=None):
     print(cmd, file=output_file)
-    cmd = cmd.split(" ")
+    cmd = cmd.split()
     process = subprocess.Popen(
         cmd,
         shell=False,
@@ -277,12 +277,16 @@ def cal_cnn_aff(pdb_file, sdf_file, gnina_exe="gnina", log_handle=None):
 
     output_sdf = f"{tempdir.name}/{os.path.basename(sdf_file)}"
     cmd = (
-        f"{gnina_exe} --minimize --scoring vinardo "
+        f"{gnina_exe} --score_only --scoring vinardo "
         f"-r {pdb_file} -l {sdf_file} "
         f"--autobox_ligand {sdf_file}  "
         f"--autobox_add 2 -o {output_sdf} "
     )
     run_and_save(cmd, output_file=log_handle)
 
-    mol = next(pybel.readfile("sdf", output_sdf))
-    return mol
+    try:
+        mol = next(pybel.readfile("sdf", output_sdf))
+        return mol
+    except Exception as e:
+        print(f"Failed gnina run on {sdf_file} with {e}. ")
+        return None
