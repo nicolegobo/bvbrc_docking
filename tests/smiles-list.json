@@ -1,0 +1,9 @@
+{
+    "input_pdb": ["1AH5"],
+    "ligand_library_type": "smiles_list",
+    "ligand_smiles_list": ["CCc1c(c(nc([nH+]1)N)N)c2ccc(cc2)NCc3cc(cc(c3)F)F",
+			   "CCc1c(c(nc([nH+]1)N)N)c2ccc3c(c2)N(CCC3)CCCOC"],
+    "output_path": "/olson@patricbrc.org/home/test",
+    "output_file": "docking-01",
+    "_tmpdir": "/home/olson/P3/dev-ubuntu/modules/bvbrc_docking/tmp.1011370"
+}

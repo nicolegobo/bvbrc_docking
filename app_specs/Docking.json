@@ -52,6 +52,19 @@
             "default":null,
             "desc":"Basename for the generated output files. Defaults to the basename of the input data.",
             "type":"wsid"
-        }
+        },
+	{
+	    "id": "enable_debug",
+	    "label": "Enable debug?",
+	    "required": 0,
+	    "default": null,
+	    "desc": "If you wish debug statements to be printed for this job, enable this option.",
+	    "type": "bool"
+	},
+	{
+	    "id": "_tmpdir",
+	    "required": 0,
+	    "default": null
+	}
     ]
 }
