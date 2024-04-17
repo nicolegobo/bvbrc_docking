@@ -35,7 +35,7 @@ all: bin
 
 local_tools: $(BIN_DIR)/run_local_docking
 $(BIN_DIR)/run_local_docking: bvbrc_docking/run_local_docking.py
-	export KB_CONDA_BASE=/envs/conda; \
+	export KB_CONDA_BASE=$(BVDOCK_CONDA_BASE); \
 	export KB_CONDA_ENV=$(BVDOCK_ENV); \
 	$(WRAP_PYTHON_SCRIPT) '$$KB_TOP/modules/$(CURRENT_DIR)/$<' $@
 
@@ -44,7 +44,7 @@ deploy-local-tools:
 	export KB_TOP=$(TARGET); \
 	export KB_RUNTIME=$(DEPLOY_RUNTIME); \
 	export KB_PYTHON_PATH=$(TARGET)/lib ; \
-	export KB_CONDA_BASE=/envs/conda; \
+	export KB_CONDA_BASE=$(BVDOCK_CONDA_BASE); \
 	export KB_CONDA_ENV=$(BVDOCK_ENV); \
 	for script in run_local_docking ; do \
 	    cp bvbrc_docking/$$script.py $(TARGET)/pybin; \
