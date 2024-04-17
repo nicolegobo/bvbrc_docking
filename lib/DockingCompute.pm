@@ -271,7 +271,7 @@ sub preflight
 	cpu => 2,
 	memory => $mem,
 	runtime => $time,
-	policy => { gpu_count => 1 },
+	policy_data => { gpu_count => 1, partition => gpu },
     };
     return $pf;
 }
