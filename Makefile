@@ -35,14 +35,17 @@ all: bin
 
 local_tools: $(BIN_DIR)/run_local_docking
 $(BIN_DIR)/run_local_docking: bvbrc_docking/run_local_docking.py
-	KB_OVERRIDE_RUNTIME=$(BVDOCK_ENV) $(WRAP_PYTHON_SCRIPT) '$$KB_TOP/modules/$(CURRENT_DIR)/$<' $@
+	export KB_CONDA_BASE=/envs/conda; \
+	export KB_CONDA_ENV=$(BVDOCK_ENV); \
+	$(WRAP_PYTHON_SCRIPT) '$$KB_TOP/modules/$(CURRENT_DIR)/$<' $@
 
 deploy-local-tools: 
 	if [ "$(KB_OVERRIDE_TOP)" != "" ] ; then sbase=$(KB_OVERRIDE_TOP) ; else sbase=$(TARGET); fi; \
 	export KB_TOP=$(TARGET); \
 	export KB_RUNTIME=$(DEPLOY_RUNTIME); \
 	export KB_PYTHON_PATH=$(TARGET)/lib ; \
-	export KB_OVERRIDE_RUNTIME=$(BVDOCK_ENV); \
+	export KB_CONDA_BASE=/envs/conda; \
+	export KB_CONDA_ENV=$(BVDOCK_ENV); \
 	for script in run_local_docking ; do \
 	    cp bvbrc_docking/$$script.py $(TARGET)/pybin; \
 	    $(WRAP_PYTHON_SCRIPT) "$$sbase/pybin/$$script.py" $(TARGET)/bin/$$script; \
@@ -65,3 +68,16 @@ deploy-docs:
 clean:
 
 include $(TOP_DIR)/tools/Makefile.common.rules
+
+#
+# This is a little ugly, but it works for now. Because lib/bvbrc_docking is a symlink, when we
+# do the install we need to copy the link data. It's possible we should always do this in the default rule
+#
+# We place this under the include of Makefile.common.rules because we are overriding
+# behavior defined there.
+#
+
+deploy-libs:
+	rm -rf $(TARGET)/lib/bvbrc_docking
+	rsync --copy-links --exclude '*.bak*' -arv lib/. $(TARGET)/lib/.
+
