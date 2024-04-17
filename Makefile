@@ -79,5 +79,5 @@ include $(TOP_DIR)/tools/Makefile.common.rules
 
 deploy-libs:
 	rm -rf $(TARGET)/lib/bvbrc_docking
-	rsync --copy-links --exclude '*.bak*' -arv lib/. $(TARGET)/lib/.
+	rsync --copy-links --exclude '*.bak*' -arv lib/* $(TARGET)/lib
 
