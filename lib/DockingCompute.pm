@@ -276,7 +276,6 @@ sub load_ligand_ws_file
     }
 
     my $res = $self->load_ligand_smiles(\@dat);
-    die Dumper($self);
     return $res;
 }
 		       
