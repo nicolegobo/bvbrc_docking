@@ -70,6 +70,10 @@ sub run
     {
 	$ligand_file = $self->load_ligand_smiles($params->{ligand_smiles_list});
     }
+    elsif ($params->{ligand_library_type} eq 'ws_file')
+    {
+	$ligand_file = $self->load_ligand_ws_file($params->{ligand_ws_file});
+    }
 
     #
     # Stage the PDB data
@@ -216,17 +220,64 @@ sub load_ligand_smiles
 
     my $file = $self->staging_dir . "/ligands.smi";
     open(F, ">", $file) or die "Cannot write $file: $!";
-    for my $i (0..$#$smiles_list)
+    my $row = 0;
+    my @new;
+    for my $elt_in (@$smiles_list)
     {
-	my $id = sprintf("ligand-%04d", $i + 1);
-	$self->{ligand_map}->{$id} = $i;
-	$self->{ligand_name}[$i] = $id;
-	$self->{ligand_info}[$i] = { id => $id, idx => $i, smiles => $smiles_list->[$i] };
-	print F join("\t", $id, $smiles_list->[$i]), "\n";
+	my $elt;
+	my $id;
+	if (ref($elt_in) eq 'ARRAY')
+	{
+	    next if @$elt_in == 0;
+	    if (@$elt_in == 1)
+	    {
+		$elt = $elt_in->[0];
+	    }
+	    else
+	    {
+		$id = $elt_in->[0];
+		$elt = $elt_in->[1];
+	    }
+	}
+	else
+	{
+	    $elt = $elt_in;
+	}
+	$id //= sprintf("ligand-%04d", $row + 1);
+	
+	$self->{ligand_map}->{$id} = $row;
+	$self->{ligand_name}[$row] = $id;
+	$self->{ligand_info}[$row] = { id => $id, idx => $row, smiles => $elt };
+	print F join("\t", $id, $elt), "\n";
+	push(@new, $elt);
+	$row++;
     }
+    $self->{smiles_list} = \@new;
 
     close(F);
     return $file;
+}
+
+sub load_ligand_ws_file
+{
+    my($self, $ws_file) = @_;
+
+    my $dat = $self->app->workspace->download_file_to_string($ws_file);
+
+    open(IN, "<", \$dat) or die "Cannot string-open results: $!";
+    my @dat;
+    while (<IN>)
+    {
+	chomp;
+	s/^\s*//;
+	next if $_ eq '';
+	my @cols = split(/\s+/);
+	push(@dat, [@cols]);
+    }
+
+    my $res = $self->load_ligand_smiles(\@dat);
+    die Dumper($self);
+    return $res;
 }
 		       
 sub stage_pdb
