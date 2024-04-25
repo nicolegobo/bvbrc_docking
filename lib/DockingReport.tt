@@ -1,8 +1,13 @@
 <h1>Docking Report</h1>
 
+[% IF proteins.size == 1 -%]
+The submitted protein was docked against [% n_ligands %] ligands using the DiffDock docking tool <cite>[1]</cite>.  <p>
+For each docking result between the protein and the given igand we report the following statistics:
+[% ELSE -%]
 The following proteins were docked against [% n_ligands %] ligands using the DiffDock docking tool <cite>[1]</cite>. The links below take you to the subsection of the
 report for the given protein. <p>
 For each docking result for a given protein and ligand we provide the following statistics:
+[% END -%]
 <dl>
 <dt>Rank</dt>
 <dd>The relative rank of this result as assigned by DiffDock</dd>
@@ -21,7 +26,7 @@ For each docking result for a given protein and ligand we provide the following 
 
 </dl>
 
-
+[% IF proteins.size > 1 -%]
 <table border="1">
 <tr>
 <th>PDB ID</th>
@@ -40,7 +45,7 @@ For each docking result for a given protein and ligand we provide the following 
 </tr>
 [% END -%]
 </table>
-
+[% END -%]
 [% FOR prot IN proteins -%]
 <hr>
 <h2>[% prot.pdb_id %]: [% prot.title %]</h2>
