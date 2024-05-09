@@ -250,8 +250,18 @@ def sdf2pdb(sdf_file, pdb_file=None):
     return pdb_file
 
 
-def clean_pdb(pdb_file, output_pdb: str) -> str:
-    mda_u = mda.Universe(pdb_file)
+def clean_pdb(pdb_file: str, output_pdb: str) -> str:
+    if pdb_file.endswith("cif.gz") or pdb_file.endswith("cif"):
+        mol = next(pybel.readfile("cif", pdb_file))
+
+        tempdir = tempfile.TemporaryDirectory()
+        temp_pdb = (
+            f"{tempdir.name}/{os.path.basename(pdb_file.replace('.gz', ''))[:-4]}.pdb"
+        )
+        mol.write("pdb", temp_pdb)
+    else:
+        temp_pdb = pdb_file
+    mda_u = mda.Universe(temp_pdb)
     protein = mda_u.select_atoms("protein")
     protein.write(output_pdb)
     return output_pdb
@@ -277,7 +287,7 @@ def cal_cnn_aff(pdb_file, sdf_file, gnina_exe="gnina", log_handle=None):
 
     output_sdf = f"{tempdir.name}/{os.path.basename(sdf_file)}"
     cmd = (
-        f"{gnina_exe} --score_only --scoring vinardo "
+        f"{gnina_exe}  --minimize --scoring vinardo "
         f"-r {pdb_file} -l {sdf_file} "
         f"--autobox_ligand {sdf_file}  "
         f"--autobox_add 2 -o {output_sdf} "
@@ -290,3 +300,15 @@ def cal_cnn_aff(pdb_file, sdf_file, gnina_exe="gnina", log_handle=None):
     except Exception as e:
         print(f"Failed gnina run on {sdf_file} with {e}. ")
         return None
+
+
+# def prep_receptor(receptor_file: str) -> str:
+#     if receptor_file.endswith("cif.gz") or receptor_file.endswith("cif"):
+#         mol = next(pybel.readfile("cif", receptor_file))
+
+#         tempdir = tempfile.TemporaryDirectory()
+#         temp_pdb = f"{tempdir.name}/{os.path.basename(receptor_file.replace('.gz', ''))[:-3]}.pdb"
+#         mol.write("pdb", temp_pdb)
+#         return temp_pdb
+#     else:
+#         return os.path.abspath(receptor_file)
