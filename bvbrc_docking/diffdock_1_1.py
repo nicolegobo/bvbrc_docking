@@ -78,7 +78,7 @@ class diff_dock(object):
             )
             os.exit(1)
 
-        output_pdb = os.path.join(self.run_dir, os.path.basename(self.receptor_pdb))
+        output_pdb = os.path.join(self.run_dir, f"{self.label}.pdb")
         self.pdb_file = clean_pdb(self.receptor_pdb, output_pdb)
 
         self.all_runs = f"{self.run_dir}/all.csv"
