@@ -15,7 +15,7 @@
         },
 	{
 	    "id": "ligand_library_type",
-	    "label": "Type of ligand library to use: named_library, smiles_list",
+	    "label": "Type of ligand library to use: ws_file, named_library, smiles_list",
 	    "required": 1,
 	    "type": "string",
 	},
@@ -30,6 +30,12 @@
 	    "label": "Array of SMILES strings",
 	    "required": 0,
 	    "type": "array"
+	},
+	{
+	    "id": "ligand_ws_file",
+	    "label": "Workspace file containing SMILES strings",
+	    "required": 0,
+	    "type": "wsid"
 	},
 	{
 	    "id": "top_n",
