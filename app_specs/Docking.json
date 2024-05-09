@@ -15,7 +15,7 @@
         },
 	{
 	    "id": "ligand_library_type",
-	    "label": "Type of ligand library to use: named_library, smiles_list",
+	    "label": "Type of ligand library to use: ws_file, named_library, smiles_list",
 	    "required": 1,
 	    "type": "string",
 	},
@@ -32,10 +32,16 @@
 	    "type": "array"
 	},
 	{
-	    "id": "top_n",
-	    "label": "Array of SMILES strings",
+	    "id": "ligand_ws_file",
+	    "label": "Workspace file containing SMILES strings",
 	    "required": 0,
-	    "type": "array"
+	    "type": "wsid"
+	},
+	{
+	    "id": "top_n",
+	    "label": "Return the top N results",
+	    "required": 0,
+	    "type": "int"
 	},
         {
             "id": "output_path",
@@ -52,6 +58,19 @@
             "default":null,
             "desc":"Basename for the generated output files. Defaults to the basename of the input data.",
             "type":"wsid"
-        }
+        },
+	{
+	    "id": "enable_debug",
+	    "label": "Enable debug?",
+	    "required": 0,
+	    "default": null,
+	    "desc": "If you wish debug statements to be printed for this job, enable this option.",
+	    "type": "bool"
+	},
+	{
+	    "id": "_tmpdir",
+	    "required": 0,
+	    "default": null
+	}
     ]
 }

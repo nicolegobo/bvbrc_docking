@@ -34,16 +34,30 @@ TPAGE_ARGS = --define kb_top=$(TARGET) --define kb_runtime=$(DEPLOY_RUNTIME) --d
 all: bin 
 
 local_tools: $(BIN_DIR)/run_local_docking
-$(BIN_DIR)/run_local_docking: bvbrc_docking/run_local.py
-	KB_OVERRIDE_RUNTIME=$(BVDOCK_ENV) $(WRAP_PYTHON_SCRIPT) '$$KB_TOP/modules/$(CURRENT_DIR)/$<' $@
+$(BIN_DIR)/run_local_docking: bvbrc_docking/run_local_docking.py
+	export KB_CONDA_BASE=$(BVDOCK_CONDA_BASE); \
+	export KB_CONDA_ENV=$(BVDOCK_ENV); \
+	$(WRAP_PYTHON_SCRIPT) '$$KB_TOP/modules/$(CURRENT_DIR)/$<' $@
+
+deploy-local-tools: 
+	if [ "$(KB_OVERRIDE_TOP)" != "" ] ; then sbase=$(KB_OVERRIDE_TOP) ; else sbase=$(TARGET); fi; \
+	export KB_TOP=$(TARGET); \
+	export KB_RUNTIME=$(DEPLOY_RUNTIME); \
+	export KB_PYTHON_PATH=$(TARGET)/lib ; \
+	export KB_CONDA_BASE=$(BVDOCK_CONDA_BASE); \
+	export KB_CONDA_ENV=$(BVDOCK_ENV); \
+	for script in run_local_docking ; do \
+	    cp bvbrc_docking/$$script.py $(TARGET)/pybin; \
+	    $(WRAP_PYTHON_SCRIPT) "$$sbase/pybin/$$script.py" $(TARGET)/bin/$$script; \
+	done
 
 bin: $(BIN_PERL) $(BIN_SERVICE_PERL) $(BIN_R) $(BIN_SERVICE_PYTHON) local_tools
 
 deploy: deploy-all
 deploy-all: deploy-client 
-deploy-client: deploy-libs deploy-scripts deploy-docs
+deploy-client: deploy-libs deploy-scripts deploy-docs deploy-local-tools
 
-deploy-service: deploy-libs deploy-scripts deploy-service-scripts deploy-specs
+deploy-service: deploy-libs deploy-scripts deploy-service-scripts deploy-specs deploy-local-tools
 
 deploy-dir:
 	if [ ! -d $(SERVICE_DIR) ] ; then mkdir $(SERVICE_DIR) ; fi
@@ -54,3 +68,16 @@ deploy-docs:
 clean:
 
 include $(TOP_DIR)/tools/Makefile.common.rules
+
+#
+# This is a little ugly, but it works for now. Because lib/bvbrc_docking is a symlink, when we
+# do the install we need to copy the link data. It's possible we should always do this in the default rule
+#
+# We place this under the include of Makefile.common.rules because we are overriding
+# behavior defined there.
+#
+
+deploy-libs:
+	rm -rf $(TARGET)/lib/bvbrc_docking
+	rsync --copy-links --exclude '*.bak*' -arv lib/* $(TARGET)/lib
+
