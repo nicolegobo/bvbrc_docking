@@ -323,7 +323,7 @@ sub preflight
     
     my $time = 60 * 60 * 10;
     my $pf = {
-	cpu => 2,
+	cpu => 8,
 	memory => $mem,
 	runtime => $time,
 	policy_data => { gpu_count => 1, partition => 'gpu' },
