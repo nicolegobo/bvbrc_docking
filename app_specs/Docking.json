@@ -43,6 +43,12 @@
 	    "required": 0,
 	    "type": "int"
 	},
+	{
+	    "id": "batch_size",
+	    "label": "Diffdock batch size",
+	    "required": 0,
+	    "type": "int"
+	},
         {
             "id": "output_path",
             "label": "Output Folder",

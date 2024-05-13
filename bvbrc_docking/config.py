@@ -50,6 +50,7 @@ class DiffDock11Config(BaseModel):
         ...,
         description="number of top N candidates for each protein-ligand pair",
     )
+    batch_size: Optional[int] = Field(..., description="diffdock batch size")
 
 
 class DiffDockPartialConfig(BaseModel):
