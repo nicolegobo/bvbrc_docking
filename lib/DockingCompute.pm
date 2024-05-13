@@ -184,6 +184,11 @@ sub compute_pdb
 	{
 	    die "Failed to copy $work_out/$ligand to $out";
 	}
+	#
+	# Also copy the diffdock logfile.
+	#
+	copy("$work_out/diffdock_log", "$out/diffdock_log.txt");
+	
 	my $result_data = csv(in => "$work_out/$ligand/result.csv", headers => 'auto', sep_char => "\t");
 	$_->{output_folder} = "$pdb->{pdb_id}/$ligand" foreach @$result_data;
 
