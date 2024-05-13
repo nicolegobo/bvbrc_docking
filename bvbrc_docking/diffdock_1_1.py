@@ -78,7 +78,7 @@ class diff_dock(object):
             )
             os.exit(1)
 
-        output_pdb = os.path.join(self.run_dir, os.path.basename(self.receptor_pdb))
+        output_pdb = os.path.join(self.run_dir, f"{self.label}.pdb")
         self.pdb_file = clean_pdb(self.receptor_pdb, output_pdb)
 
         self.all_runs = f"{self.run_dir}/all.csv"
@@ -128,7 +128,7 @@ class diff_dock(object):
 
                     # skip high score and rank
                     rank = int(rank)
-                    if self.top_n != 0 & rank > self.top_n:
+                    if self.top_n != 0 and rank > self.top_n:
                         continue
                     if float(confidence) > 100:
                         continue
@@ -194,6 +194,8 @@ class diff_dock(object):
                         f"{self.diffdock_dir}/gnina",
                         log_handle=self.log_handle,
                     )
+                    if mol is None:
+                        continue
                     print(
                         "\t".join(
                             [
