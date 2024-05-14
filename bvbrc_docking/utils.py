@@ -3,10 +3,10 @@ import io
 import json
 import logging
 import os
-import shlex
 import subprocess
 import sys
 import tempfile
+import warnings
 from pathlib import Path
 from typing import Optional, Type, TypeVar, Union
 
@@ -19,6 +19,20 @@ from rdkit import Chem, RDLogger
 
 T = TypeVar("T")
 PathLike = Union[str, Path]
+
+logger = logging.getLogger(__name__)
+
+
+def configure_logging(debug=0) -> None:
+    """Set up logging."""
+    logger_level = logging.DEBUG if debug else logging.INFO
+    logging.basicConfig(
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=logger_level,
+        handlers=[
+            logging.StreamHandler(sys.stdout),
+        ],
+    )
 
 
 def _resolve_path_exists(value: Optional[Path]) -> Optional[Path]:
@@ -174,11 +188,11 @@ three_to_one = {
 }
 
 
-def build_logger(debug=0):
-    logger_level = logging.DEBUG if debug else logging.INFO
-    logging.basicConfig(level=logger_level, format="%(asctime)s %(message)s")
-    logger = logging.getLogger(__name__)
-    return logger
+# def build_logger(debug=0):
+#     logger_level = logging.DEBUG if debug else logging.INFO
+#     logging.basicConfig(level=logger_level, format="%(asctime)s %(message)s")
+#     logger = logging.getLogger(__name__)
+#     return logger
 
 
 def run_and_save(cmd, cwd=None, output_file=None):
@@ -252,6 +266,9 @@ def sdf2pdb(sdf_file, pdb_file=None):
 
 def clean_pdb(pdb_file: str, output_pdb: str) -> str:
     if pdb_file.endswith("cif.gz") or pdb_file.endswith("cif"):
+        logger.debug(
+            f"Found cif format for input target protein. Converting it to pdb. "
+        )
         mol = next(pybel.readfile("cif", pdb_file))
 
         tempdir = tempfile.TemporaryDirectory()
@@ -261,8 +278,18 @@ def clean_pdb(pdb_file: str, output_pdb: str) -> str:
         mol.write("pdb", temp_pdb)
     else:
         temp_pdb = pdb_file
+
     mda_u = mda.Universe(temp_pdb)
+    if mda_u.select_atoms("nucleic").n_atoms > 0:
+        logger.warning(
+            f"{os.path.basename(pdb_file)} contains nucleic acids (DNA/RNA), which will be removed due to incompatibility with the docking program. Proceed with caution. "
+        )
+
     protein = mda_u.select_atoms("protein")
+    if protein.n_residues > 1024:
+        logger.warning(
+            f"{os.path.basename(pdb_file)} has large number of residues (>1024). Proceed with caution. "
+        )
     protein.write(output_pdb)
     return output_pdb
 
