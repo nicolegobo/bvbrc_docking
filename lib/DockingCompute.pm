@@ -167,7 +167,7 @@ sub compute_pdb
     my @batch_size;
     if ($self->params->{batch_size} =~ /\d/)
     {
-	@batch_size = ('--batch_size', $self->params->{batch_size});
+	@batch_size = ('--batch-size', $self->params->{batch_size});
     }
     my @cmd = ('run_local_docking',
 	       @batch_size,
