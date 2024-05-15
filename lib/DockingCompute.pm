@@ -146,6 +146,24 @@ sub compute_pdb
 {
     my($self, $pdb, $ligand_file, $work_dir) = @_;
     my $work_out = "$work_dir/out";
+
+    #
+    # Determine if our protein is large enough to require a smaller batch_size
+    #
+    my $residues;
+    my $ok = IPC::Run::run(["count-pdb-residues", $pdb->{local_path}], ">", \$residues);
+    chomp $residues;
+    if (!$ok)
+    {
+	die "Could not determine residue coutn for $pdb->{local_path}";
+    }
+    print STDERR "PDB has $residues residues\n";
+    if ($residues > 1024 && !defined($self->params->{batch_size}))
+    {
+	$self->params->{batch_size} = 5;
+	print STDERR "Setting batch_size to " . $self->params->{batch_size} . "\n";
+    }
+    
     my @batch_size;
     if ($self->params->{batch_size} =~ /\d/)
     {
