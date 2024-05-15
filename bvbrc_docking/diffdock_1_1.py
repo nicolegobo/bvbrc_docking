@@ -102,14 +102,20 @@ class diff_dock(object):
         self.log_handle.close()
 
     def run_docking(self):
+        #
+        # Run with -u to enable line-buffering so we can see the errors aligned with
+        # the stdout for better debugging.
+        #
         cmd_diffdock = [
-            "python", "-m", "inference",
-            "--protein_ligand_csv", "self.all_runs",
+            "python",
+            "-u",
+            "-m", "inference",
+            "--protein_ligand_csv", self.all_runs,
             "--out_dir", self.run_dir
             ]
 
         if self.batch_size > 0:
-            cmd_diffdock.extend(["--batch_size", self.batch])
+            cmd_diffdock.extend(["--batch_size", str(self.batch_size)])
             
         # the run failed with the original diffdock 1.0 parameters used:
         # f"--inference_steps 20 --samples_per_complex 40 --batch_size 6"

@@ -147,12 +147,12 @@ sub compute_pdb
     my($self, $pdb, $ligand_file, $work_dir) = @_;
     my $work_out = "$work_dir/out";
     my @batch_size;
-    if ($self->params->{batch_size) =~ /\d/)
+    if ($self->params->{batch_size} =~ /\d/)
     {
 	@batch_size = ('--batch_size', $self->params->{batch_size});
     }
     my @cmd = ('run_local_docking',
-	       @batch-size,
+	       @batch_size,
 		'--drug-dbs', $ligand_file,
 		'--name', 'diffdock_1_1',
 		'--receptor-pdb', $pdb->{local_path},
