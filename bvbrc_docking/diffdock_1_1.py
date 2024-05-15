@@ -8,11 +8,9 @@
 # in the BVDOCK_DIFFDOCK_DIR environment variable.
 #
 
-import glob
+
 import os
 import re
-import sys
-import time
 from operator import itemgetter
 
 import numpy as np
