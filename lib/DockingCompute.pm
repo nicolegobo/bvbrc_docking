@@ -6,17 +6,20 @@ use Cwd qw(abs_path getcwd);
 use File::Copy;
 use File::Copy::Recursive qw(dircopy);
 use File::Path qw(rmtree make_path);
+use File::Spec;
 use strict;
 use Data::Dumper;
 use File::Basename;
 use File::Temp;
-use JSON::XS;
+use JSON;
 use Text::CSV qw(csv);
 use Getopt::Long::Descriptive;
 use P3DataAPI;
 use YAML;
 use Template;
 use Module::Metadata;
+use warnings;
+use strict;
 
 use base 'Class::Accessor';
 __PACKAGE__->mk_accessors(qw(api smiles_list debug work_dir staging_dir output_dir app params
@@ -64,7 +67,19 @@ sub run
     my $ligand_file;
     if ($params->{ligand_library_type} eq 'named_library')
     {
-	$ligand_file = $self->load_ligand_library($params->{ligand_named_library});
+        if ($params->{ligand_named_library} eq 'known-targets')
+        {
+	    $ligand_file = $self->load_ligand_library("/path/to/application-backend/known_targets_file.txt");
+        }
+        elsif ($params->{ligand_named_library} eq 'market')
+        {
+	    $ligand_file = $self->load_ligand_library("/path/to/application-backend/markets_file.txt");
+        }
+        else
+        {
+        die "Unknown ligand library type selected $params->{ligand_library_type}";
+        }
+
     }
     elsif ($params->{ligand_library_type} eq 'smiles_list')
     {
@@ -74,6 +89,12 @@ sub run
     {
 	$ligand_file = $self->load_ligand_ws_file($params->{ligand_ws_file});
     }
+
+    #
+    # Add ligand and parameters to self
+    #
+    $params->{ligand_file} = $ligand_file; # all ligand inputs are written to file
+    $self -> {params} = $params;
 
     #
     # Stage the PDB data
@@ -112,7 +133,11 @@ sub write_report
     my($self, $pdbs) = @_;
     
     my $url_base = $ENV{P3_BASE_URL} // "https://www.bv-brc.org";
-    my %vars = (proteins => $pdbs,
+    my %vars = (
+        proteins => $pdbs,
+		work_dir => $self->{work_dir},
+        staging_dir => $self->{staging_dir},
+        output_dir => $self->{output_dir},
 		ligands => $self->{ligand_name},
 		ligand_info => $self->{ligand_info},
 		results => $self->{result_data},
@@ -121,18 +146,32 @@ sub write_report
 		url_base => $url_base,
 		feature_base => "$url_base/view/Feature",
 		structure_base => "$url_base/view/ProteinStructure#path",
-	       );
+        bvbrc_logo => "/path/to/application-backend/bv-brc-header-logo-bg.png"
+			);
 
-    my $templ = Template->new(ABSOLUTE => 1);
+	# Convert the hash to a JSON string 
+	my $json_text = to_json(\%vars, { pretty => 1 });
+	#Define the path to the report_data.json file
+	my $report_data_path = File::Spec->catfile($self->{work_dir}, "report_data.json");
 
-    my $mpath = Module::Metadata->find_module_by_name(__PACKAGE__);
-    my $mdir = dirname($mpath);
-    my $report_template = "$mdir/DockingReport.tt";
-    print Dumper(\%vars);
+	# Write the JSON string to the file
+	open(my $fh, '>', $report_data_path) or die "Could not open file '$report_data_path': $!";
+	print $fh $json_text;
+	close($fh);
+	 print "Analysis data written to $report_data_path\n";
 
-    $templ->process($report_template, \%vars, $self->output_dir . "/DockingReport.html") or 
-	die "Error processing template: " . $templ->error();
-	
+	my @cmd = (
+		"python3",
+		"/path/to/code/write_docking_html_report.py",
+		"$report_data_path"
+	);
+
+    print STDERR "Run: @cmd\n";
+    my $ok = IPC::Run::run(\@cmd);
+    if (!$ok)
+    {
+     die "Report command failed $?: @cmd";
+    }
 }
 
 #
@@ -215,18 +254,6 @@ sub compute_pdb
 	
 	my $result_data = csv(in => "$work_out/$ligand/result.csv", headers => 'auto', sep_char => "\t");
 	$_->{output_folder} = "$pdb->{pdb_id}/$ligand" foreach @$result_data;
-
-	# {
-	# 	"CNNaffinity" : "4.2400560379",
-	# 	"CNNscore" : "0.0287393406",
-	# 	"Vinardo" : "17.38850",
-	# 	"comb_pdb" : "1AH5_rank7_confidence-2.63.pdb",
-	# 	"ident" : "ligand-0001",
-	# 	"lig_sdf" : "rank7_confidence-2.63.sdf",
-	# 	"rank" : "7",
-	# 	"score" : "2.63"
-	# }
-
 	$self->{result_data}->{$pdb->{pdb_id}}->{$ligand} = $result_data;
     }
 }
@@ -234,8 +261,37 @@ sub compute_pdb
 sub load_ligand_library
 {
     my($self, $lib_name) = @_;
-    print STDERR "Load ligand library $lib_name\n";
-    die "Ligand libraries not supported yet";
+
+    # Open the file
+    open(my $fh, '<', $lib_name) or die "Could not open file '$lib_name' $!";
+
+    # # Skip the first line (header) -- all files have headers for now # #
+    <$fh>;
+
+    # Read the entire file into a string
+    my $file_contents = do { local $/; <$fh> };
+
+    # Close the file
+    close($fh);
+
+    # Print the file contents
+    print $file_contents;
+
+    my $dat = ($file_contents);
+
+    open(IN, "<", \$dat) or die "Cannot string-open results: $!";
+    my @dat;
+    while (<IN>)
+    {
+	chomp;
+	s/^\s*//;
+	next if $_ eq '';
+	my @cols = split(/\s+/);
+	push(@dat, [@cols]);
+    }
+
+    my $res = $self->load_ligand_smiles(\@dat);
+    return $res;
 }
 
 sub load_ligand_smiles
