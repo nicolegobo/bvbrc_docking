@@ -1,0 +1,14 @@
+{
+    "input_pdb": [
+        "3I12"
+    ],
+    "ligand_library_type": "smiles_list",
+    "output_path": "/olson@patricbrc.org/home/test/",
+    "output_file": "3I12_DR47_free_text",
+    "ligand_smiles_list": [
+        [
+            "DR47",
+            "COC1=CC2=C(C=C1)N(C(=O)C1=CC=C(Cl)C=C1)C(C)=C2CC(=O)OCC(O)=O"
+        ]
+    ]
+}
