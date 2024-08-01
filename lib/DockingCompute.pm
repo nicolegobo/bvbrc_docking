@@ -67,13 +67,14 @@ sub run
     my $ligand_file;
     if ($params->{ligand_library_type} eq 'named_library')
     {
-        if ($params->{ligand_named_library} eq 'known-targets')
+        # if ($params->{ligand_named_library} eq 'known-targets')
+        if ($params->{ligand_named_library} eq 'approved-drugs')
         {
-	    $ligand_file = $self->load_ligand_library("/path/to/application-backend/known_targets_file.txt");
+	    $ligand_file = $self->load_ligand_library("/path/to/application-backend/drugbank_approved.txt");
         }
-        elsif ($params->{ligand_named_library} eq 'market')
+        elsif ($params->{ligand_named_library} eq 'experimental_drugs')
         {
-	    $ligand_file = $self->load_ligand_library("/path/to/application-backend/markets_file.txt");
+	    $ligand_file = $self->load_ligand_library("/path/to/application-backend/drugbank_exp_inv.txt");
         }
         else
         {
@@ -162,7 +163,7 @@ sub write_report
 
 	my @cmd = (
 		"python3",
-		"/path/to/code/write_docking_html_report.py",
+		"/path/to/service/script/dir/write_docking_html_report.py",
 		"$report_data_path"
 	);
 
@@ -181,6 +182,7 @@ sub write_report
 #
 # We've already chdir'd to $work_dir.
 #
+
 sub compute_pdb
 {
     my($self, $pdb, $ligand_file, $work_dir) = @_;
@@ -258,42 +260,6 @@ sub compute_pdb
     }
 }
 
-sub load_ligand_library
-{
-    my($self, $lib_name) = @_;
-
-    # Open the file
-    open(my $fh, '<', $lib_name) or die "Could not open file '$lib_name' $!";
-
-    # # Skip the first line (header) -- all files have headers for now # #
-    <$fh>;
-
-    # Read the entire file into a string
-    my $file_contents = do { local $/; <$fh> };
-
-    # Close the file
-    close($fh);
-
-    # Print the file contents
-    print $file_contents;
-
-    my $dat = ($file_contents);
-
-    open(IN, "<", \$dat) or die "Cannot string-open results: $!";
-    my @dat;
-    while (<IN>)
-    {
-	chomp;
-	s/^\s*//;
-	next if $_ eq '';
-	my @cols = split(/\s+/);
-	push(@dat, [@cols]);
-    }
-
-    my $res = $self->load_ligand_smiles(\@dat);
-    return $res;
-}
-
 sub load_ligand_smiles
 {
     my($self, $smiles_list) = @_;
@@ -343,6 +309,43 @@ sub load_ligand_smiles
     return $file;
 }
 
+sub load_ligand_library {
+    my ($self, $lib_name) = @_;
+    #
+    # Given a ligand library write ID, Name, and SMILE string to info.txt with names
+    # And pass only ID and SMILE string to match the other inputs
+    #
+    open(my $fh, '<', $lib_name) or die "Could not open file '$lib_name' $!";
+    my $file_contents = do { local $/; <$fh> };
+    close($fh);
+
+    my $dat = ($file_contents);
+    my $staging_dir = $self->staging_dir;
+
+    # Open info.txt for writing in the staging directory
+    open(my $info_fh, '>', "$staging_dir/info.txt") or die "Could not open file '$staging_dir/info.txt' $!";
+
+    open(IN, "<", \$dat) or die "Cannot string-open results: $!";
+    my @dat;
+    while (<IN>) {
+        chomp;
+        s/^\s*//; # Remove leading whitespace
+        next if $_ eq '';
+        my @cols = split(/\s+/);
+        # Check if there are exactly three columns
+        if (scalar @cols == 3) {
+            # Push only ID and SMILES string to @dat
+            push(@dat, [$cols[0], $cols[2]]); # Only pass the ID and SMILES to @dat
+
+            # Write all three columns to info.txt
+            print $info_fh join(' ', @cols) . "\n"; 
+        }
+    }
+    close($info_fh);
+    my $res = $self->load_ligand_smiles(\@dat);
+    return $res;
+}
+
 sub load_ligand_ws_file
 {
     my($self, $ws_file) = @_;
@@ -363,7 +366,7 @@ sub load_ligand_ws_file
     my $res = $self->load_ligand_smiles(\@dat);
     return $res;
 }
-		       
+
 sub stage_pdb
 {
     my($self, $pdb_list) = @_;
