@@ -70,11 +70,15 @@ sub run
         # if ($params->{ligand_named_library} eq 'known-targets')
         if ($params->{ligand_named_library} eq 'approved-drugs')
         {
-	    $ligand_file = $self->load_ligand_library("/path/to/application-backend/drugbank_approved.txt");
+	    $ligand_file = $self->load_ligand_library("/vol/bvbrc/production/application-backend/bvbrc_docking/drugbank_approved.txt");
         }
         elsif ($params->{ligand_named_library} eq 'experimental_drugs')
         {
-	    $ligand_file = $self->load_ligand_library("/path/to/application-backend/drugbank_exp_inv.txt");
+	    $ligand_file = $self->load_ligand_library("/vol/bvbrc/production/application-backend/bvbrc_docking/drugbank_exp_inv.txt");
+        }
+        elsif ($params->{ligand_named_library} eq 'test')
+        {
+        $ligand_file = $self->load_ligand_library("/vol/bvbrc/production/application-backend/bvbrc_docking/test.txt");
         }
         else
         {
@@ -147,7 +151,7 @@ sub write_report
 		url_base => $url_base,
 		feature_base => "$url_base/view/Feature",
 		structure_base => "$url_base/view/ProteinStructure#path",
-        bvbrc_logo => "/path/to/application-backend/bv-brc-header-logo-bg.png"
+        bvbrc_logo => "/vol/bvbrc/production/application-backend/bvbrc_docking/bv-brc-header-logo-bg.png"
 			);
 
 	# Convert the hash to a JSON string 
@@ -163,7 +167,7 @@ sub write_report
 
 	my @cmd = (
 		"python3",
-		"/path/to/service/script/dir/write_docking_html_report.py",
+		"/home/nbowers/bvbrc-dev/dev_container/modules/bvbrc_docking/scripts/write_docking_html_report.py",
 		"$report_data_path"
 	);
 
