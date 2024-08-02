@@ -167,7 +167,7 @@ sub write_report
 
 	my @cmd = (
 		"python3",
-		"/home/nbowers/bvbrc-dev/dev_container/modules/bvbrc_docking/scripts/write_docking_html_report.py",
+		"write_docking_html_report.py",
 		"$report_data_path"
 	);
 
