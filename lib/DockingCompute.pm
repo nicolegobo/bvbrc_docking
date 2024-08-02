@@ -70,11 +70,11 @@ sub run
         # if ($params->{ligand_named_library} eq 'known-targets')
         if ($params->{ligand_named_library} eq 'approved-drugs')
         {
-	    $ligand_file = $self->load_ligand_library("/vol/bvbrc/production/application-backend/bvbrc_docking/drugbank_approved.txt");
+	    $ligand_file = $self->load_ligand_library("/vol/bvbrc/production/application-backend/bvbrc_docking/dev/edited_libs/nb_edited_drugbank_approved.txt");
         }
         elsif ($params->{ligand_named_library} eq 'experimental_drugs')
         {
-	    $ligand_file = $self->load_ligand_library("/vol/bvbrc/production/application-backend/bvbrc_docking/drugbank_exp_inv.txt");
+	    $ligand_file = $self->load_ligand_library("/vol/bvbrc/production/application-backend/bvbrc_docking/dev/edited_libs/nb_edited_drugbank_exp_inv.txt");
         }
         elsif ($params->{ligand_named_library} eq 'test')
         {
