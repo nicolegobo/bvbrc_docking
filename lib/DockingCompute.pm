@@ -167,7 +167,7 @@ sub write_report
 
 	my @cmd = (
 		"python3",
-		"write_docking_html_report.py",
+		"write_docking_html_report",
 		"$report_data_path"
 	);
 
