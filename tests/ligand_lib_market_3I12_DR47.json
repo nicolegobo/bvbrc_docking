@@ -1,9 +1,0 @@
-{
-    "input_pdb": [
-        "3I12"
-    ],
-    "ligand_library_type": "named_library",
-    "output_path": "/olson@patricbrc.org/home/test/",
-    "output_file": "3I12_DR47_market_ligands",
-    "ligand_named_library": "experimental_drugs"
-}
