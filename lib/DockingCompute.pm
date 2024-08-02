@@ -166,7 +166,6 @@ sub write_report
 	 print "Analysis data written to $report_data_path\n";
 
 	my @cmd = (
-		"python3",
 		"write_docking_html_report",
 		"$report_data_path"
 	);
