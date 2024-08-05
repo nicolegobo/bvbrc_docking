@@ -405,7 +405,7 @@ sub preflight
 {
     my($app, $app_def, $raw_params, $params) = @_;
 
-    my $mem = '16G';
+    my $mem = '128G';
     
     my $time = 60 * 60 * 10;
     my $pf = {
