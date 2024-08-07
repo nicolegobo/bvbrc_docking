@@ -144,6 +144,7 @@ sub write_report
         output_dir => $self->{output_dir},
 		ligands => $self->{ligand_name},
 		ligand_info => $self->{ligand_info},
+        failed_validation => $self->{failed_validation},
 		results => $self->{result_data},
 		params => $self->params,
 		output_folder => $self->params->{output_path} . "/." . $self->params->{output_file},
@@ -272,7 +273,7 @@ sub load_ligand_smiles
     $self->{smiles_list} = $smiles_list;
     my $staging_dir = $self->staging_dir;
     
-    my $file = $self->staging_dir . "/raw_ligands.smi";
+     my $file = $self->staging_dir . "/raw_ligands.smi";
     my $validated_ligands_file = $self->staging_dir . "/ligands.smi";
     open(F, ">", $file) or die "Cannot write $file: $!";
     my $row = 0;
@@ -299,19 +300,13 @@ sub load_ligand_smiles
 	    $elt = $elt_in;
 	}
 	$id //= sprintf("ligand-%04d", $row + 1);
-	
-	$self->{ligand_map}->{$id} = $row;
-	$self->{ligand_name}[$row] = $id;
-	$self->{ligand_info}[$row] = { id => $id, idx => $row, smiles => $elt };
 	print F join("\t", $id, $elt), "\n";
 	push(@new, $elt);
 	$row++;
     }
-    $self->{smiles_list} = \@new;
-
     close(F);
 
-    #RUN the step to check the inputs
+    #RUN Validate the input ligands
     my @cmd = (
         "check_input_smile_strings",
         "$staging_dir",
@@ -323,7 +318,25 @@ sub load_ligand_smiles
     {
      die "Input clean up command failed $?: @cmd";
     }
+    # Assign the ligand values from the validated ligands.smi
+    open(VF, "<", $validated_ligands_file) or die "Cannot read $validated_ligands_file: $!";
+    $row = 0;
+    @new = ();
 
+    while (my $line = <VF>) {
+        chomp $line;
+        my ($id, $elt) = split("\t", $line);
+
+        $self->{ligand_map}->{$id} = $row;
+        $self->{ligand_name}[$row] = $id;
+        $self->{ligand_info}[$row] = { id => $id, idx => $row, smiles => $elt };
+        push(@new, $elt);
+
+        $row++;
+    }
+
+    $self->{smiles_list} = \@new;
+    close(VF);
     return $validated_ligands_file;
 }
 
