@@ -213,12 +213,11 @@ def parse_sample_results(input_details_dict, input_ligand_dict):
             inplace=True
         )
         report_tmp["Vinardo ABS"] = report_tmp["Vinardo"].astype(float).abs()
-        report_tmp = report_tmp.sort_values(by="Vinardo ABS", ascending=False)
+        report_tmp = report_tmp.sort_values(by="Vinardo ABS", ascending=True)
         # if "Ligand Name" in report_tmp.columns:
         if "Drugbank Generic Name" in report_tmp.columns:
             report_tmp = report_tmp[[
-                "Ligand ID", 
-                #"Ligand Name", 
+                "Ligand ID",  
                 "Drugbank Generic Name",
                 "Viewer", 
                 "Vinardo", 
@@ -268,7 +267,7 @@ def parse_sample_results(input_details_dict, input_ligand_dict):
     report_top_ranked_ligands = top_ranked_ligands.copy()
     report_top_ranked_ligands["Ligand ID"] = '<a href="#' + top_ranked_ligands["Ligand ID"] + '">' + top_ranked_ligands["Ligand ID"]+ '</a>'
     report_top_ranked_ligands["Vinardo ABS"] = report_top_ranked_ligands["Vinardo"].astype(float).abs()
-    report_top_ranked_ligands = report_top_ranked_ligands.sort_values(by="Vinardo ABS", ascending=False)
+    report_top_ranked_ligands = report_top_ranked_ligands.sort_values(by="Vinardo ABS", ascending=True)
     report_top_ranked_ligands.drop(columns="Vinardo ABS", inplace=True)
     ## START: Make the main table HTML ###
     main_ligand_table_headers, main_ligand_table_rows = generate_table_html(report_top_ranked_ligands)
@@ -471,6 +470,12 @@ def main(argv):
     with open(html_report_path, 'w') as file:
         file.write(html_template)
     sys.stderr.write("Generated HTML report at {}.".format(html_report_path))
+    print("nb dev 08_07_2024")
+    # goals
+    # 1. fix the vinardo sorting
+    # 2. add the ligands that failed validation - if invalidligands file is not zero
+    # 3. parse the ligands from bob's log 
+    # 4. add them to the report 
 
 if __name__ == "__main__":
     main(sys.argv)
