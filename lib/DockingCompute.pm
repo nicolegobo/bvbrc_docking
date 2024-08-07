@@ -256,6 +256,10 @@ sub compute_pdb
 	# Also copy the diffdock logfile.
 	#
 	copy("$work_out/diffdock_log", "$out/diffdock_log.txt");
+
+	if (-f "$work_out/bad-ligands.txt") {
+	    copy("$work_out/bad-ligands.txt", "$out/bad-ligands.txt");
+	}
 	
 	my $result_data = csv(in => "$work_out/$ligand/result.csv", headers => 'auto', sep_char => "\t");
 	$_->{output_folder} = "$pdb->{pdb_id}/$ligand" foreach @$result_data;
