@@ -109,7 +109,8 @@ class diff_dock(object):
             "-u",
             "-m", "inference",
             "--protein_ligand_csv", self.all_runs,
-            "--out_dir", self.run_dir
+            "--out_dir", self.run_dir,
+            "--bad_ligands", f"self.run_dir/bad-ligands.txt"
             ]
 
         if self.batch_size > 0:
