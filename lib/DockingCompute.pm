@@ -260,6 +260,12 @@ sub compute_pdb
 	if (-f "$work_out/bad-ligands.txt") {
 	    copy("$work_out/bad-ligands.txt", "$out/bad-ligands.txt");
 	}
+    # File exists even if it is empty - Checking size
+    my $staging_dir = $self->staging_dir;
+    if (-f "$staging_dir/invalid_smile_strings.txt" && -s "$staging_dir/invalid_smile_strings.txt") {
+    copy("$staging_dir/invalid_smile_strings.txt" , "$out/invalid_smile_strings.txt");
+    }
+
 	
 	my $result_data = csv(in => "$work_out/$ligand/result.csv", headers => 'auto', sep_char => "\t");
 	$_->{output_folder} = "$pdb->{pdb_id}/$ligand" foreach @$result_data;
@@ -277,7 +283,7 @@ sub load_ligand_smiles
     $self->{smiles_list} = $smiles_list;
     my $staging_dir = $self->staging_dir;
     
-     my $file = $self->staging_dir . "/raw_ligands.smi";
+    my $file = $self->staging_dir . "/raw_ligands.smi";
     my $validated_ligands_file = $self->staging_dir . "/ligands.smi";
     open(F, ">", $file) or die "Cannot write $file: $!";
     my $row = 0;

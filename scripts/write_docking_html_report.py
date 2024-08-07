@@ -6,14 +6,13 @@ import pandas as pd
 import sys
 
 def check_RDKit_invalid_ligands(input_details_dict):
-    print(input_details_dict["staging_dir"])
     lig_failed_rdkit = os.path.join(input_details_dict["staging_dir"], "invalid_smile_strings.txt")
     # assuming check_input_smile_strings writes out an empty file
     if os.path.getsize(lig_failed_rdkit) != 0:
+        print('RDKit')
         invalid_ligs_df = pd.read_csv(lig_failed_rdkit, sep='\t', header=None, names=['Ligand ID', 'SMILE'])
         lig_failed_rdkit_table_html = generate_table_html_2(invalid_ligs_df, table_width='95%')
         rdkit_failed_ligands_html = """
-        <h3> RDKit Validation Failures </h3>
         <h3> RDKit Non-compliant Ligands </h3>
         <p>The following ligands did not pass SMILE string validation preformed by <a href="https://rdkit.org/">RDKit</a>. \
             This is a collection of cheminformatics and machine-learning software. RDKit validates SMILE strings according to \
@@ -22,14 +21,39 @@ def check_RDKit_invalid_ligands(input_details_dict):
             A detailed explaination of sanitization is available <a href="https://www.rdkit.org/docs/RDKit_Book.html">RDKit Book</a> \
             under the Molecular Sanitization header. <p>
             {lig_failed_rdkit_table_html}
-        <h3> DiffDock Conformation Failures </h3>
-        <h3> DiffDock Incompatible Ligands </h3>
         """.format(
         lig_failed_rdkit_table_html=lig_failed_rdkit_table_html,
         )
     else:
         rdkit_failed_ligands_html = ""
     return rdkit_failed_ligands_html
+
+def check_dd_invalid_ligands(input_details_dict, input_ligand_dict):
+    # check if the bad ligands file exists
+    lig_failed_diffdock = os.path.join(input_details_dict["work_dir"], input_details_dict["params"]["input_pdb"][0], "out", "bad-ligands.txt")
+    if os.path.getsize(lig_failed_diffdock) != 0:
+        print("DD failure")
+        dd_failed_ligands = []
+        with open(lig_failed_diffdock) as file:
+            for line in file:
+                if line.startswith('@BodyException'):
+                    ligand_id = line.split()[1]
+                    smile = input_ligand_dict[ligand_id]
+                    # Append the key-value pair as a dictionary to the list
+                    dd_failed_ligands.append({'Ligand ID': ligand_id, 'Smile': smile})
+                    # match with the smile string to match the other tables
+        dd_failed_ligands_df = pd.DataFrame(dd_failed_ligands)
+        lig_failed_DD_table_html = generate_table_html_2(dd_failed_ligands_df, table_width='95%')
+        dd_failed_ligands_html = """
+        <h3> DiffDock Incompatible Ligands </h3>
+        <p> The following ligands are incompatible with the current version of DiffDock. <p>
+        {lig_failed_DD_table_html}
+        """.format(
+        lig_failed_DD_table_html=lig_failed_DD_table_html,
+        )
+    else:
+        dd_failed_ligands_html = ""
+    return dd_failed_ligands_html
 
 # Function to generate the HTML table with a standard width
 def generate_table_html_2(df, table_width='95%'):
@@ -309,20 +333,14 @@ def parse_sample_results(input_details_dict, input_ligand_dict):
     ### END: Take top row for main table ###
     return {"ligand_subtable_raw_html" : ligand_subtables, "main_table_html" : main_table_raw_html}
 
-def write_html_report(bvbrc_logo_path, main_table, ligand_subtables, input_details_dict):
+def write_html_report(bvbrc_logo_path, main_table, ligand_subtables, input_details_dict, input_ligand_dict):
     base64_string = image_to_base64(bvbrc_logo_path)
     bvbrc_logo_base64 = f'<div class="image-container"><img src="data:image/png;base64,{base64_string}" alt="Embedded Image"></div>'
     protein_title = input_details_dict["proteins"][0]["title"]
     input_pdb = input_details_dict["params"]["input_pdb"][0]
     # check for invalid ligands
     rdkit_failed_ligands_html = check_RDKit_invalid_ligands(input_details_dict)
-    # html for ligands that failed verification
-    # if the failed file exisits put them into a table
-    #if 
-    # html for ligands that failed diff dock processing
-    # maybe break out into another function
-    # parse the file
-    # if the @ found in file 
+    dd_failed_ligands_html = check_dd_invalid_ligands(input_details_dict, input_ligand_dict)
     ### write the report HTML ###
     html_template = """
         <!DOCTYPE html>
@@ -433,6 +451,8 @@ def write_html_report(bvbrc_logo_path, main_table, ligand_subtables, input_detai
             {ligand_subtables}
 
             {rdkit_failed_ligands_html}
+            <br>
+            {dd_failed_ligands_html}
             <h3>References</h3>
             <ol>
             <li>Olson RD, Assaf R, Brettin T, Conrad N, Cucinell C, Davis JJ, Dempsey DM, Dickerman A, Dietrich EM, Kenyon RW, Kuscuoglu \
@@ -460,8 +480,9 @@ def write_html_report(bvbrc_logo_path, main_table, ligand_subtables, input_detai
         ligand_subtables = ligand_subtables,
         input_pdb = input_pdb,
         protein_title = protein_title,
-        main_table=main_table,
+        main_table = main_table,
         rdkit_failed_ligands_html = rdkit_failed_ligands_html,
+        dd_failed_ligands_html = dd_failed_ligands_html,
         )   
     return html_template
 
@@ -491,21 +512,13 @@ def main(argv):
     ligand_subtables = ligand_dict["ligand_subtable_raw_html"]
     main_table = ligand_dict["main_table_html"]
     bvbrc_logo_path = input_details_dict["bvbrc_logo"]
-    html_template= write_html_report(bvbrc_logo_path, main_table, ligand_subtables, input_details_dict)
+    html_template= write_html_report(bvbrc_logo_path, main_table, ligand_subtables, input_details_dict, input_ligand_dict)
     output_dir = input_details_dict["output_dir"]
     html_report_path = os.path.join(output_dir, "small_molecule_docking_report.html")
     with open(html_report_path, 'w') as file:
         file.write(html_template)
     sys.stderr.write("Generated HTML report at {}.".format(html_report_path))
     print("nb dev 08_07_2024")
-    # goals
-    # 1. fix the vinardo sorting - done
-    # 2. add the ligands failed verification to report json
-    # 2. add the bob's log to report.json 
-    # 2. add the ligands that failed validation - if invalidligands file is not zero
-    # 3. add the ligands 
-    # 3. parse the ligands from bob's log 
-    # 4. add them to the report 
 
 if __name__ == "__main__":
     main(sys.argv)
