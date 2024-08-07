@@ -54,6 +54,5 @@ def main(argv):
     input_smile_file = argv[2]
     smile_lines = open_smile_file(input_smile_file)
     check_smile_strings(staging_dir, smile_lines)
-    print('nicole this is updated 8 6 2024 3')
 if __name__ == "__main__":
     main(sys.argv)
