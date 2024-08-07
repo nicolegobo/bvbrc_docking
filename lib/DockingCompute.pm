@@ -67,14 +67,13 @@ sub run
     my $ligand_file;
     if ($params->{ligand_library_type} eq 'named_library')
     {
-        # if ($params->{ligand_named_library} eq 'known-targets')
         if ($params->{ligand_named_library} eq 'approved-drugs')
         {
-	    $ligand_file = $self->load_ligand_library("/vol/bvbrc/production/application-backend/bvbrc_docking/dev/edited_libs/nb_edited_drugbank_approved.txt");
+	    $ligand_file = $self->load_ligand_library("/vol/bvbrc/production/application-backend/bvbrc_docking/drugbank_approved.txt");
         }
         elsif ($params->{ligand_named_library} eq 'experimental_drugs')
         {
-	    $ligand_file = $self->load_ligand_library("/vol/bvbrc/production/application-backend/bvbrc_docking/dev/edited_libs/nb_edited_drugbank_exp_inv.txt");
+	    $ligand_file = $self->load_ligand_library("/vol/bvbrc/production/application-backend/bvbrc_docking/drugbank_exp_inv.txt");
         }
         elsif ($params->{ligand_named_library} eq 'test')
         {
@@ -271,8 +270,10 @@ sub load_ligand_smiles
     # We just store this in the smiles_list member.
     #
     $self->{smiles_list} = $smiles_list;
-
-    my $file = $self->staging_dir . "/ligands.smi";
+    my $staging_dir = $self->staging_dir;
+    
+    my $file = $self->staging_dir . "/raw_ligands.smi";
+    my $validated_ligands_file = $self->staging_dir . "/ligands.smi";
     open(F, ">", $file) or die "Cannot write $file: $!";
     my $row = 0;
     my @new;
@@ -309,8 +310,23 @@ sub load_ligand_smiles
     $self->{smiles_list} = \@new;
 
     close(F);
-    return $file;
+
+    #RUN the step to check the inputs
+    my @cmd = (
+        "check_input_smile_strings",
+        "$staging_dir",
+        "$file",
+        );
+    print STDERR "Run: @cmd\n";
+    my $ok = IPC::Run::run(\@cmd);
+    if (!$ok)
+    {
+     die "Input clean up command failed $?: @cmd";
+    }
+
+    return $validated_ligands_file;
 }
+
 
 sub load_ligand_library {
     my ($self, $lib_name) = @_;

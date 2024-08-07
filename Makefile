@@ -43,6 +43,10 @@ $(BIN_DIR)/count-pdb-residues: bvbrc_docking/count-pdb-residues.py
 	export KB_CONDA_BASE=$(BVDOCK_CONDA_BASE); \
 	export KB_CONDA_ENV=$(BVDOCK_ENV); \
 	$(WRAP_PYTHON_SCRIPT) '$$KB_TOP/modules/$(CURRENT_DIR)/$<' $@
+$(BIN_DIR)/check_input_smile_strings: scripts/check_input_smile_strings.py
+	export KB_CONDA_BASE=$(BVDOCK_CONDA_BASE); \
+	export KB_CONDA_ENV=$(BVDOCK_ENV); \
+	$(WRAP_PYTHON_SCRIPT) '$$KB_TOP/modules/$(CURRENT_DIR)/$<' $@
 
 deploy-local-tools: 
 	if [ "$(KB_OVERRIDE_TOP)" != "" ] ; then sbase=$(KB_OVERRIDE_TOP) ; else sbase=$(TARGET); fi; \
@@ -51,7 +55,7 @@ deploy-local-tools:
 	export KB_PYTHON_PATH=$(TARGET)/lib ; \
 	export KB_CONDA_BASE=$(BVDOCK_CONDA_BASE); \
 	export KB_CONDA_ENV=$(BVDOCK_ENV); \
-	for script in run_local_docking count-pdb-residues ; do \
+	for script in run_local_docking count-pdb-residues check_input_smile_strings ; do \
 	    cp bvbrc_docking/$$script.py $(TARGET)/pybin; \
 	    $(WRAP_PYTHON_SCRIPT) "$$sbase/pybin/$$script.py" $(TARGET)/bin/$$script; \
 	done
