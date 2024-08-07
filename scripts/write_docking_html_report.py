@@ -5,9 +5,34 @@ import os
 import pandas as pd
 import sys
 
+def check_RDKit_invalid_ligands(input_details_dict):
+    print(input_details_dict["staging_dir"])
+    lig_failed_rdkit = os.path.join(input_details_dict["staging_dir"], "invalid_smile_strings.txt")
+    # assuming check_input_smile_strings writes out an empty file
+    if os.path.getsize(lig_failed_rdkit) != 0:
+        invalid_ligs_df = pd.read_csv(lig_failed_rdkit, sep='\t', header=None, names=['Ligand ID', 'SMILE'])
+        lig_failed_rdkit_table_html = generate_table_html_2(invalid_ligs_df, table_width='95%')
+        rdkit_failed_ligands_html = """
+        <h3> RDKit Validation Failures </h3>
+        <h3> RDKit Non-compliant Ligands </h3>
+        <p>The following ligands did not pass SMILE string validation preformed by <a href="https://rdkit.org/">RDKit</a>. \
+            This is a collection of cheminformatics and machine-learning software. RDKit validates SMILE strings according to \
+            parsing and sanitization.  For parsing, RDKit uses grammar defined in the <a href="https://github.com/rdkit/rdkit/tree/master/Code/GraphMol/SmilesParse">Smile Parse</a> \
+            module. Which closely follows guidelines established in <a href="http://opensmiles.org/opensmiles.html">OpenSmiles</a>. \
+            A detailed explaination of sanitization is available <a href="https://www.rdkit.org/docs/RDKit_Book.html">RDKit Book</a> \
+            under the Molecular Sanitization header. <p>
+            {lig_failed_rdkit_table_html}
+        <h3> DiffDock Conformation Failures </h3>
+        <h3> DiffDock Incompatible Ligands </h3>
+        """.format(
+        lig_failed_rdkit_table_html=lig_failed_rdkit_table_html,
+        )
+    else:
+        rdkit_failed_ligands_html = ""
+    return rdkit_failed_ligands_html
 
-# Function to generate the HTML table rows - center aligns numeric values
-def generate_table_html(df):
+# Function to generate the HTML table with a standard width
+def generate_table_html_2(df, table_width='95%'):
     # Generate table headers
     headers = ''.join(f'<th>{header}</th>' for header in df.columns)
 
@@ -33,7 +58,18 @@ def generate_table_html(df):
                 row_html += f'<td>{cell_value}</td>'
         rows += f'<tr>{row_html}</tr>'
 
-    return headers, rows
+    # Construct the complete HTML table with specified width
+    table_html = f'''
+    <table style="width: {table_width}; border-collapse: collapse; border: 1px solid black;">
+        <thead>
+            <tr>{headers}</tr>
+        </thead>
+        <tbody>
+            {rows}
+        </tbody>
+    </table>
+    '''
+    return table_html
 
 def get_name_by_id(data_dict, id):
     return data_dict.get(id, "ID not found")
@@ -207,7 +243,6 @@ def parse_sample_results(input_details_dict, input_ligand_dict):
                 "CNNscore": "CNN Score", 
                 "CNNaffinity": "CNN Affinity", 
                 "smile_string": "SMILES",
-                # "Names": "Ligand Name",
                 "drugbank_database_link_html": "Ligand Name",
             },
             inplace=True
@@ -236,28 +271,19 @@ def parse_sample_results(input_details_dict, input_ligand_dict):
                 "CNN Affinity", 
                 "SMILES",
             ]]
-        #print(report_tmp.columns)
-        ligand_subtable_headers, ligand_subtable_rows = generate_table_html(report_tmp)
+        one_ligand_subtable_html = generate_table_html_2(report_tmp, table_width='95%')
         ligand_subtable_html = \
             """
             <h3 id="{ligand_id_text}">
                 <a href="{ligand_dir}" target="_blank">{ligand_id_text}</a>: {sml_str}
             </h3>
                 <p>Ranked docking conformations:<p>
-                    <table>
-                        <thead>
-                            <tr>
-                                {ligand_subtable_headers}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {ligand_subtable_rows}
-                        </tbody>
-                    </table>
+                    {one_ligand_subtable_html}
             """.format(ligand_id_text=ligand_id_text, \
                     ligand_dir = ligand_dir, \
-                        ligand_subtable_headers=ligand_subtable_headers, \
-                        ligand_subtable_rows=ligand_subtable_rows, \
+                    one_ligand_subtable_html=one_ligand_subtable_html, \
+                        # ligand_subtable_headers=ligand_subtable_headers, \
+                        # ligand_subtable_rows=ligand_subtable_rows, \
                         sml_str = sml_str)
         ligand_subtables += ligand_subtable_html
         ### END: Make the ligand subtables HTML ###
@@ -270,7 +296,7 @@ def parse_sample_results(input_details_dict, input_ligand_dict):
     report_top_ranked_ligands = report_top_ranked_ligands.sort_values(by="Vinardo ABS", ascending=True)
     report_top_ranked_ligands.drop(columns="Vinardo ABS", inplace=True)
     ## START: Make the main table HTML ###
-    main_ligand_table_headers, main_ligand_table_rows = generate_table_html(report_top_ranked_ligands)
+    main_ligand_table_html = generate_table_html_2(report_top_ranked_ligands, table_width='95%')
     # Make the top ligand main table
     main_table_raw_html = \
                 """
@@ -278,17 +304,8 @@ def parse_sample_results(input_details_dict, input_ligand_dict):
                     <p>Following is the top-ranked conformation for each ligand that docked successfully with \
                     the protein. The ligand ID is linked to the list of all conformations for that docking result. \
                     The "structure" link will display a structure viewer of the ligand docked to the protein. <p>
-                        <table>
-                            <thead>
-                                <tr>
-                                    {main_ligand_table_headers}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                    {main_ligand_table_rows}
-                            </tbody>
-                        </table>
-    """.format(main_ligand_table_headers = main_ligand_table_headers, main_ligand_table_rows = main_ligand_table_rows)
+                    {main_ligand_table_html}
+    """.format(main_ligand_table_html=main_ligand_table_html)
     ### END: Take top row for main table ###
     return {"ligand_subtable_raw_html" : ligand_subtables, "main_table_html" : main_table_raw_html}
 
@@ -297,7 +314,15 @@ def write_html_report(bvbrc_logo_path, main_table, ligand_subtables, input_detai
     bvbrc_logo_base64 = f'<div class="image-container"><img src="data:image/png;base64,{base64_string}" alt="Embedded Image"></div>'
     protein_title = input_details_dict["proteins"][0]["title"]
     input_pdb = input_details_dict["params"]["input_pdb"][0]
-
+    # check for invalid ligands
+    rdkit_failed_ligands_html = check_RDKit_invalid_ligands(input_details_dict)
+    # html for ligands that failed verification
+    # if the failed file exisits put them into a table
+    #if 
+    # html for ligands that failed diff dock processing
+    # maybe break out into another function
+    # parse the file
+    # if the @ found in file 
     ### write the report HTML ###
     html_template = """
         <!DOCTYPE html>
@@ -407,6 +432,7 @@ def write_html_report(bvbrc_logo_path, main_table, ligand_subtables, input_detai
             <h3> Per-ligand Details </h3>
             {ligand_subtables}
 
+            {rdkit_failed_ligands_html}
             <h3>References</h3>
             <ol>
             <li>Olson RD, Assaf R, Brettin T, Conrad N, Cucinell C, Davis JJ, Dempsey DM, Dickerman A, Dietrich EM, Kenyon RW, Kuscuoglu \
@@ -435,6 +461,7 @@ def write_html_report(bvbrc_logo_path, main_table, ligand_subtables, input_detai
         input_pdb = input_pdb,
         protein_title = protein_title,
         main_table=main_table,
+        rdkit_failed_ligands_html = rdkit_failed_ligands_html,
         )   
     return html_template
 
@@ -472,8 +499,11 @@ def main(argv):
     sys.stderr.write("Generated HTML report at {}.".format(html_report_path))
     print("nb dev 08_07_2024")
     # goals
-    # 1. fix the vinardo sorting
+    # 1. fix the vinardo sorting - done
+    # 2. add the ligands failed verification to report json
+    # 2. add the bob's log to report.json 
     # 2. add the ligands that failed validation - if invalidligands file is not zero
+    # 3. add the ligands 
     # 3. parse the ligands from bob's log 
     # 4. add them to the report 
 
