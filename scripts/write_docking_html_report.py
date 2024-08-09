@@ -162,6 +162,8 @@ def parse_sample_results(input_details_dict, input_ligand_dict):
         bvbrc_logo_base64 = f'<div class="image-container"><img src="data:image/png;base64,{base64_string}" alt="Embedded Image"></div>'
         input_ligands = input_details_dict["params"]["ligand_file"]
         input_smiles = ""
+        protein_title = input_details_dict["proteins"][0]["title"]
+        input_pdb = input_details_dict["params"]["input_pdb"][0]
         with open(input_ligands,'r') as file:
             for line in file:
             # Append each line to the string with a newline character
@@ -219,11 +221,19 @@ def parse_sample_results(input_details_dict, input_ligand_dict):
                     {bvbrc_logo_base64}
                     </a>
             </header>
-        <p> Zero ligands successfully bound to the given Protein<p>
-        {input_smiles}
+        <p> Zero ligands successfully bound to the given protein:
+            <br>
+            <br>
+        Input Protein: {protein_title}
+            <br>
+        Input PBD ID: {input_pdb}
+            <br>
+        Input Smile Strings: <br> {input_smiles} <p>
         """.format(
         bvbrc_logo_base64=bvbrc_logo_base64, 
         input_smiles = input_smiles,
+        protein_title=protein_title,
+        input_pdb=input_pdb,
         )
         output_dir = input_details_dict["output_dir"]
         html_report_path = os.path.join(output_dir, "small_molecule_docking_report.html")
@@ -418,7 +428,7 @@ def write_html_report(bvbrc_logo_path, main_table, ligand_subtables, input_detai
                     <li><strong>Ligand ID</strong>: The name of the ligand. If a ligand ID is not provided the program will \
                         assign “ID #” where the number is assigned according to the line number in the input.</li>
                     <br>
-                    <li><strong>Viewer</strong>: Click on the hyper link to open a new table with the BVBRC protein structure \
+                    <li><strong>Viewer</strong>: Click on the hyperlink to open a new table with the BVBRC protein structure \
                         viewer showing that specific protein ligand interaction.</li>
                     <br>
                     <li><strong>DiffDocK Confidence</strong>: Confidence score of this result as assigned by DiffDock. A lower confidence score \
@@ -466,6 +476,11 @@ def write_html_report(bvbrc_logo_path, main_table, ligand_subtables, input_detai
             <li>McNutt, Andrew T., Paul Francoeur, Rishal Aggarwal, Tomohide Masuda, Rocco Meli, Matthew Ragoza, Jocelyn Sunseri, and David Ryan Koes. "GNINA 1.0: molecular docking with deep learning." Journal of cheminformatics 13, no. 1 (2021): 43.</a></li>
             
             <li>Quiroga R, Villarreal MA (2016) Vinardo: A Scoring Function Based on Autodock Vina Improves Scoring, Docking, and Virtual Screening. PLOS ONE 11(5): e0155183. https://doi.org/10.1371/journal.pone.0155183.</a></li>
+
+            <li>Bento, A.P., Hersey, A., Félix, E. et al. An open source chemical structure curation pipeline using RDKit. J Cheminform 12, 51 (2020). https://doi.org/10.1186/s13321-020-00456-1</a></li>
+
+            <li>David Sehnal, Sebastian Bittrich, Mandar Deshpande, Radka Svobodová, Karel Berka, Václav Bazgier, Sameer Velankar, Stephen K Burley, Jaroslav Koča, Alexander S Rose: Mol* Viewer: modern web app for 3D visualization and analysis of large biomolecular structures, Nucleic Acids Research, 2021; https://doi.org/10.1093/nar/gkab314.</a></li>
+
             <ol>
         <script>
             document.querySelectorAll('a[target="_blank"]').forEach(link => {{
