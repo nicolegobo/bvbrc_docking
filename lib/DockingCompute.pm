@@ -285,6 +285,7 @@ sub load_ligand_smiles
     
     my $file = $self->staging_dir . "/raw_ligands.smi";
     my $validated_ligands_file = $self->staging_dir . "/ligands.smi";
+
     open(F, ">", $file) or die "Cannot write $file: $!";
     my $row = 0;
     my @new;
@@ -347,7 +348,21 @@ sub load_ligand_smiles
 
     $self->{smiles_list} = \@new;
     close(VF);
-    return $validated_ligands_file;
+
+    if (-e $validated_ligands_file) { # Check if file exists
+        if (-s $validated_ligands_file == 0) {  # Check if the file size is zero
+            # upload the invalid ligands to the user
+                if (-f "$staging_dir/invalid_smile_strings.txt" && -s "$staging_dir/invalid_smile_strings.txt") {
+                    }
+            die "Zero valid ligands passed. Exiting script.\n";
+        } else {
+            # Continue to the return statement
+            return $validated_ligands_file;
+        }
+    } else {
+        die "Validated ligands file does not exist.\n";
+    }
+    # return $validated_ligands_file;
 }
 
 
