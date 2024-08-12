@@ -362,7 +362,6 @@ sub load_ligand_smiles
     } else {
         die "Validated ligands file does not exist.\n";
     }
-    # return $validated_ligands_file;
 }
 
 
@@ -489,8 +488,7 @@ sub save_output_files
 		      txt => 'txt',
 		      png => 'png',
 		      pdb => 'pdb',
-		      tsv => 'tsv',
-		      txt => 'txt',);
+		      tsv => 'tsv',);
 
     my @suffix_map = map { ("--map-suffix", "$_=$suffix_map{$_}") } keys %suffix_map;
 
