@@ -5,11 +5,14 @@ import os
 import pandas as pd
 import sys
 
+from pathlib import Path
+
+
 def check_RDKit_invalid_ligands(input_details_dict):
     lig_failed_rdkit = os.path.join(input_details_dict["staging_dir"], "invalid_smile_strings.txt")
     # assuming check_input_smile_strings writes out an empty file
-    if os.path.getsize(lig_failed_rdkit) != 0:
-        print('RDKit')
+    path = Path(lig_failed_rdkit)
+    if path.is_file() and path.stat().st_size > 0:
         invalid_ligs_df = pd.read_csv(lig_failed_rdkit, sep='\t', header=None, names=['Ligand ID', 'SMILE'])
         lig_failed_rdkit_table_html = generate_table_html_2(invalid_ligs_df, table_width='95%')
         rdkit_failed_ligands_html = """
@@ -31,7 +34,11 @@ def check_RDKit_invalid_ligands(input_details_dict):
 def check_dd_invalid_ligands(input_details_dict, input_ligand_dict):
     # check if the bad ligands file exists
     lig_failed_diffdock = os.path.join(input_details_dict["work_dir"], input_details_dict["params"]["input_pdb"][0], "out", "bad-ligands.txt")
-    if os.path.getsize(lig_failed_diffdock) != 0:
+    # add an if file exists because this function may be used if all ligands are invalid and diff dock never runs
+    path = Path(lig_failed_diffdock)
+    print(path)
+    # Check if the file exists and is not empty
+    if path.is_file() and path.stat().st_size > 0:
         print("DD failure")
         dd_failed_ligands = []
         with open(lig_failed_diffdock) as file:
@@ -45,8 +52,13 @@ def check_dd_invalid_ligands(input_details_dict, input_ligand_dict):
         dd_failed_ligands_df = pd.DataFrame(dd_failed_ligands)
         lig_failed_DD_table_html = generate_table_html_2(dd_failed_ligands_df, table_width='95%')
         dd_failed_ligands_html = """
-        <h3> DiffDock Incompatible Ligands </h3>
-        <p> The following ligands are incompatible with the current version of DiffDock. <p>
+        <h3> DiffDock Undocked Ligands </h3>
+        <p> Ligands in this table not dock to the protein. This coud be because they are incompatible with the protein or the current version of DiffDock. \
+        Another reason could be the available memory during your job. To test this, please submit a new job with each ligand invidiaully or in smaller groups. \
+        These ligands are also described in the file "bad-ligands.txt" in the landing directory for your job.
+        <br> <br>
+        If you have questions about failed ligands, we encourage you to reach out to a team member by either reporting the job or contacting us by clicking "About" \
+        in our header then the dropdown option "Contact Us".<p>
         {lig_failed_DD_table_html}
         """.format(
         lig_failed_DD_table_html=lig_failed_DD_table_html,
@@ -156,91 +168,7 @@ def parse_sample_results(input_details_dict, input_ligand_dict):
                 rows.append(row)
 
     if len(rows) == 0:
-        # if no ligands successfully bound, write out to an empty report.
-        bvbrc_logo_path = input_details_dict["bvbrc_logo"]
-        base64_string = image_to_base64(bvbrc_logo_path)
-        bvbrc_logo_base64 = f'<div class="image-container"><img src="data:image/png;base64,{base64_string}" alt="Embedded Image"></div>'
-        input_ligands = input_details_dict["params"]["ligand_file"]
-        input_smiles = ""
-        protein_title = input_details_dict["proteins"][0]["title"]
-        input_pdb = input_details_dict["params"]["input_pdb"][0]
-        with open(input_ligands,'r') as file:
-            for line in file:
-            # Append each line to the string with a newline character
-                input_smiles += line + "<br />"
-        ## TO DO: in report refactor make this template less redundant 
-        html_template_failed_job = """
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-                body {{ font-family: Roboto, sans-serif; color: black; }}
-                    header {{
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                        padding: 10px 20px;
-                    }}
-                    header > a img {{
-                        max-width: 225px;  /* Maximum width */
-                        max-height: 225px;  /* Maximum height */
-                        width: auto;
-                        height: auto;
-                    }}
-                    .title {{
-                        font-size: 36px;  /* Adjust the size of the title text */
-                        font-family: 'Roboto', sans-serif;
-                        font-weight: bold;
-                        color: black;
-                    }}
-                    .warning {{ color: black; }}
-                    table, th, td {{ border: 1px solid black; border-collapse: collapse; }}
-                    th, td {{ padding: 5px; text-align: left; }}
-                    img {{ width: 100%; max-width: 600px; height: auto; }}
-                    .image-row {{
-                        display: flex;
-                        flex-wrap: wrap;
-                        justify-content: flex-start;
-                    }}
-                    .image-container {{
-                        width: 33%; /* Each image container takes up one-third of the row */
-                        padding: 5px; /* Padding around the images */
-                        box-sizing: border-box;
-                    }}
-                    .img {{
-                        width: 100%; /* Make the image expand to fill the container */
-                        max-width: 600px; /* Maximum width of the image */
-            </style>
-        </head>
-        <body>
-            <header>
-                <div class="title">Small-molecule Docking Service Report</div>
-                <a href="https://www.bv-brc.org/" target="_blank">
-                    {bvbrc_logo_base64}
-                    </a>
-            </header>
-        <p> Zero ligands successfully bound to the given protein:
-            <br>
-            <br>
-        Input Protein: {protein_title}
-            <br>
-        Input PBD ID: {input_pdb}
-            <br>
-        Input Smile Strings: <br> {input_smiles} <p>
-        """.format(
-        bvbrc_logo_base64=bvbrc_logo_base64, 
-        input_smiles = input_smiles,
-        protein_title=protein_title,
-        input_pdb=input_pdb,
-        )
-        output_dir = input_details_dict["output_dir"]
-        html_report_path = os.path.join(output_dir, "small_molecule_docking_report.html")
-        with open(html_report_path, 'w') as file:
-            file.write(html_template_failed_job)
-        sys.stderr.write("Generated HTML report at {}. \n".format(html_report_path))
-        sys.stderr.write("Zero ligands bound to the protein. \n")
+        write_html_report_all_ligands_invalid(input_details_dict, input_ligand_dict)
         sys.exit(0)
     dff = pd.DataFrame(rows)
     dff = dff.astype({
@@ -498,8 +426,109 @@ def write_html_report(bvbrc_logo_path, main_table, ligand_subtables, input_detai
         main_table = main_table,
         rdkit_failed_ligands_html = rdkit_failed_ligands_html,
         dd_failed_ligands_html = dd_failed_ligands_html,
-        )   
-    return html_template
+        )
+    output_dir = input_details_dict["output_dir"]
+    html_report_path = os.path.join(output_dir, "small_molecule_docking_report.html")
+    with open(html_report_path, 'w') as file:
+        file.write(html_template)
+    sys.stderr.write("Generated HTML report at {}.".format(html_report_path))
+
+def write_html_report_all_ligands_invalid(input_details_dict, input_ligand_dict):
+# if no ligands successfully bound, write out to an empty report.
+    bvbrc_logo_path = input_details_dict["bvbrc_logo"]
+    base64_string = image_to_base64(bvbrc_logo_path)
+    bvbrc_logo_base64 = f'<div class="image-container"><img src="data:image/png;base64,{base64_string}" alt="Embedded Image"></div>'
+    rdkit_failed_ligands_html = check_RDKit_invalid_ligands(input_details_dict)
+    dd_failed_ligands_html = check_dd_invalid_ligands(input_details_dict, input_ligand_dict)
+
+    if "proteins" in input_details_dict.keys():
+        protein_title = input_details_dict["proteins"][0]["title"]
+        input_pdb = input_details_dict["params"]["input_pdb"][0]
+        protein_text = """
+    <p> Zero ligands successfully bound to the given protein:
+        <br>
+        <br>
+    Input Protein: {protein_title}
+        <br>
+    Input PBD ID: {input_pdb}
+        <br>
+        """
+    else:
+        protein_title = ""
+        input_pdb = ""
+        protein_text= ""
+    ## TO DO: in report refactor make this template less redundant 
+    html_template_failed_job = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body {{ font-family: Roboto, sans-serif; color: black; }}
+                header {{
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 10px 20px;
+                }}
+                header > a img {{
+                    max-width: 225px;  /* Maximum width */
+                    max-height: 225px;  /* Maximum height */
+                    width: auto;
+                    height: auto;
+                }}
+                .title {{
+                    font-size: 36px;  /* Adjust the size of the title text */
+                    font-family: 'Roboto', sans-serif;
+                    font-weight: bold;
+                    color: black;
+                }}
+                .warning {{ color: black; }}
+                table, th, td {{ border: 1px solid black; border-collapse: collapse; }}
+                th, td {{ padding: 5px; text-align: left; }}
+                img {{ width: 100%; max-width: 600px; height: auto; }}
+                .image-row {{
+                    display: flex;
+                    flex-wrap: wrap;
+                    justify-content: flex-start;
+                }}
+                .image-container {{
+                    width: 33%; /* Each image container takes up one-third of the row */
+                    padding: 5px; /* Padding around the images */
+                    box-sizing: border-box;
+                }}
+                .img {{
+                    width: 100%; /* Make the image expand to fill the container */
+                    max-width: 600px; /* Maximum width of the image */
+        </style>
+    </head>
+    <body>
+        <header>
+            <div class="title">Small-molecule Docking Service Report</div>
+            <a href="https://www.bv-brc.org/" target="_blank">
+                {bvbrc_logo_base64}
+                </a>
+        </header>
+        {protein_text}
+        {rdkit_failed_ligands_html}
+        <br>
+        {dd_failed_ligands_html}
+        <br>
+    """.format(
+    bvbrc_logo_base64=bvbrc_logo_base64,
+    protein_text=protein_text, 
+    protein_title=protein_title,
+    input_pdb=input_pdb,
+    rdkit_failed_ligands_html=rdkit_failed_ligands_html,
+    dd_failed_ligands_html=dd_failed_ligands_html,
+    )
+    output_dir = input_details_dict["output_dir"]
+    html_report_path = os.path.join(output_dir, "small_molecule_docking_report.html")
+    with open(html_report_path, 'w') as file:
+        file.write(html_template_failed_job)
+    sys.stderr.write("Generated HTML report at {}. \n".format(html_report_path))
+    sys.stderr.write("Zero ligands bound to the protein. \n")
 
 def report_setup(argv):
     ### Parse input data for the report ###
@@ -515,25 +544,28 @@ def report_setup(argv):
     work_dir = input_details_dict["work_dir"]
     input_pdb = input_details_dict["params"]["input_pdb"][0]
     input_details_dict["sample_results"]  = glob.glob("{}/{}/out/*/result.csv".format(work_dir, input_pdb))
-    ligand_file = input_details_dict["params"]["ligand_file"]
-    input_ligand_dict = parse_ligand_file_to_dict(ligand_file)
-    return input_details_dict, input_ligand_dict
+    if len(input_details_dict["sample_results"]) == 0:
+        print('All ligands were marked as invalid by check input smile strings')
+        ligand_file = input_details_dict["failed_validation"]
+        input_ligand_dict = parse_ligand_file_to_dict(ligand_file)
+        return input_details_dict, input_ligand_dict
+    else:
+        ligand_file = input_details_dict["params"]["ligand_file"]
+        input_ligand_dict = parse_ligand_file_to_dict(ligand_file)
+        return input_details_dict, input_ligand_dict
 
 
 def main(argv):
-    #Set up the variables and ligand dictionary
+    # Set up the variables and ligand dictionary
     input_details_dict, input_ligand_dict = report_setup(argv)
-    ligand_dict = parse_sample_results(input_details_dict, input_ligand_dict)
-    ligand_subtables = ligand_dict["ligand_subtable_raw_html"]
-    main_table = ligand_dict["main_table_html"]
-    bvbrc_logo_path = input_details_dict["bvbrc_logo"]
-    html_template= write_html_report(bvbrc_logo_path, main_table, ligand_subtables, input_details_dict, input_ligand_dict)
-    output_dir = input_details_dict["output_dir"]
-    html_report_path = os.path.join(output_dir, "small_molecule_docking_report.html")
-    with open(html_report_path, 'w') as file:
-        file.write(html_template)
-    sys.stderr.write("Generated HTML report at {}.".format(html_report_path))
-    print("nb dev 08_07_2024")
+    if len(input_details_dict["sample_results"]) == 0:
+        write_html_report_all_ligands_invalid(input_details_dict, input_ligand_dict)
+    else:
+        ligand_dict = parse_sample_results(input_details_dict, input_ligand_dict)
+        ligand_subtables = ligand_dict["ligand_subtable_raw_html"]
+        main_table = ligand_dict["main_table_html"]
+        bvbrc_logo_path = input_details_dict["bvbrc_logo"]
+        write_html_report(bvbrc_logo_path, main_table, ligand_subtables, input_details_dict, input_ligand_dict)
 
 if __name__ == "__main__":
     main(sys.argv)

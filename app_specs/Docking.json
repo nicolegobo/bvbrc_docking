@@ -46,8 +46,11 @@
 	{
 	    "id": "batch_size",
 	    "label": "Diffdock batch size",
-	    "required": 0,
+	    "required": 1,
+		"default": 10,
+		"desc": "The batch size impacts Diff Dock preformance. The size is reset according to protein size in lib Docking Commpute pm.",
 	    "type": "int"
+
 	},
         {
             "id": "output_path",

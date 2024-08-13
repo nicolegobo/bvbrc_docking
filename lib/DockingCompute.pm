@@ -132,6 +132,54 @@ sub run
     }
 }
 
+sub write_zero_valid_ligands_report
+{
+    # my($self, $pdbs) = @_;
+    # my($self, $invalid_ligands_file) = @_;
+    my($self) = @_;
+
+    my $url_base = $ENV{P3_BASE_URL} // "https://www.bv-brc.org";
+    my %vars = (
+        # proteins => $pdbs,
+		work_dir => $self->{work_dir},
+        staging_dir => $self->{staging_dir},
+        output_dir => $self->{output_dir},
+		ligands => $self->{ligand_name},
+		ligand_info => $self->{ligand_info},
+        failed_validation => $self->staging_dir . "/invalid_smile_strings.txt",
+		params => $self->params,
+		output_folder => $self->params->{output_path} . "/." . $self->params->{output_file},
+		url_base => $url_base,
+		feature_base => "$url_base/view/Feature",
+		structure_base => "$url_base/view/ProteinStructure#path",
+        bvbrc_logo => "/vol/bvbrc/production/application-backend/bvbrc_docking/bv-brc-header-logo-bg.png"
+			);
+	# Convert the hash to a JSON string 
+	my $json_text = to_json(\%vars, { pretty => 1 });
+	#Define the path to the report_data.json file
+	my $report_data_path = File::Spec->catfile($self->{work_dir}, "report_data.json");
+
+	# Write the JSON string to the file
+	open(my $fh, '>', $report_data_path) or die "Could not open file '$report_data_path': $!";
+	print $fh $json_text;
+	close($fh);
+	 print "Analysis data written to $report_data_path\n";
+
+	my @cmd = (
+		"write_docking_html_report",
+		"$report_data_path"
+	);
+
+    print STDERR "Run: @cmd\n";
+    my $ok = IPC::Run::run(\@cmd);
+    if (!$ok)
+    {
+     die "Report command failed $?: @cmd";
+    }
+    # upload report
+    
+}
+
 sub write_report
 {
     my($self, $pdbs) = @_;
@@ -202,7 +250,7 @@ sub compute_pdb
 	die "Could not determine residue coutn for $pdb->{local_path}";
     }
     print STDERR "PDB has $residues residues\n";
-    if ($residues > 1024 && !defined($self->params->{batch_size}))
+    if ($residues > 1024)
     {
 	$self->params->{batch_size} = 5;
 	print STDERR "Setting batch_size to " . $self->params->{batch_size} . "\n";
@@ -285,6 +333,7 @@ sub load_ligand_smiles
     
     my $file = $self->staging_dir . "/raw_ligands.smi";
     my $validated_ligands_file = $self->staging_dir . "/ligands.smi";
+
     open(F, ">", $file) or die "Cannot write $file: $!";
     my $row = 0;
     my @new;
@@ -347,7 +396,31 @@ sub load_ligand_smiles
 
     $self->{smiles_list} = \@new;
     close(VF);
-    return $validated_ligands_file;
+
+    if (-e $validated_ligands_file) { # Check if file exists
+        if (-s $validated_ligands_file == 0) {  # Check if the file size is zero
+            if (-f "$staging_dir/invalid_smile_strings.txt" && -s "$staging_dir/invalid_smile_strings.txt") {
+                    # run the report script
+                    $self->write_zero_valid_ligands_report();
+                    my $output = $self->output_dir;
+                    my $workspace_output_path = $self->params->{output_path} . "/." . $self->params->{output_file};
+                    my @cmd = ("p3-cp", "--overwrite", "$output/small_molecule_docking_report.html", "ws:" . $workspace_output_path);
+                    print STDERR "saving files to workspace... @cmd\n";
+                    my $ok = IPC::Run::run(\@cmd);
+                    if (!$ok)
+                        {
+                        warn "Error $? copying output with @cmd\n";
+                        }
+                    print STDERR "Report uploaded. Exiting before DiffDock runs ";
+                    exit 0;
+                    }
+        } else {
+            # Continue and pass the valid ligands
+            return $validated_ligands_file;
+        }
+    } else {
+        die "Validated ligands file does not exist.\n";
+    }
 }
 
 
@@ -474,8 +547,7 @@ sub save_output_files
 		      txt => 'txt',
 		      png => 'png',
 		      pdb => 'pdb',
-		      tsv => 'tsv',
-		      txt => 'txt',);
+		      tsv => 'tsv',);
 
     my @suffix_map = map { ("--map-suffix", "$_=$suffix_map{$_}") } keys %suffix_map;
 
