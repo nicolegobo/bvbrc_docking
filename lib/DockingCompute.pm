@@ -250,7 +250,6 @@ sub compute_pdb
 	die "Could not determine residue coutn for $pdb->{local_path}";
     }
     print STDERR "PDB has $residues residues\n";
-    # if ($residues > 1024 && !defined($self->params->{batch_size}))
     if ($residues > 1024)
     {
 	$self->params->{batch_size} = 5;
