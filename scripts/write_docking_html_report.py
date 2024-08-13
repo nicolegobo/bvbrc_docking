@@ -53,9 +53,9 @@ def check_dd_invalid_ligands(input_details_dict, input_ligand_dict):
         lig_failed_DD_table_html = generate_table_html_2(dd_failed_ligands_df, table_width='95%')
         dd_failed_ligands_html = """
         <h3> DiffDock Undocked Ligands </h3>
-        <p> Ligands in this table not dock to the protein. This coud be because they are incompatible with the protein or the current version of DiffDock. \
+        <p> Ligands in this table did not dock to the protein. This coud be because they are incompatible with the protein or the current version of DiffDock. \
         Another reason could be the available memory during your job. To test this, please submit a new job with each ligand invidiaully or in smaller groups. \
-        These ligands are also described in the file "bad-ligands.txt" in the landing directory for your job.
+        These ligands are also described in the file "bad-ligands.txt" in the protein subdirectory for your job.
         <br> <br>
         If you have questions about failed ligands, we encourage you to reach out to a team member by either reporting the job or contacting us by clicking "About" \
         in our header then the dropdown option "Contact Us".<p>
