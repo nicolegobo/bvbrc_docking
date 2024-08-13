@@ -36,7 +36,7 @@ def check_dd_invalid_ligands(input_details_dict, input_ligand_dict):
     lig_failed_diffdock = os.path.join(input_details_dict["work_dir"], input_details_dict["params"]["input_pdb"][0], "out", "bad-ligands.txt")
     # add an if file exists because this function may be used if all ligands are invalid and diff dock never runs
     path = Path(lig_failed_diffdock)
-
+    print(path)
     # Check if the file exists and is not empty
     if path.is_file() and path.stat().st_size > 0:
         print("DD failure")
@@ -52,8 +52,13 @@ def check_dd_invalid_ligands(input_details_dict, input_ligand_dict):
         dd_failed_ligands_df = pd.DataFrame(dd_failed_ligands)
         lig_failed_DD_table_html = generate_table_html_2(dd_failed_ligands_df, table_width='95%')
         dd_failed_ligands_html = """
-        <h3> DiffDock Incompatible Ligands </h3>
-        <p> The following ligands are incompatible with the current version of DiffDock. <p>
+        <h3> DiffDock Undocked Ligands </h3>
+        <p> Ligands in this table not dock to the protein. This coud be because they are incompatible with the protein or the current version of DiffDock. \
+        Another reason could be the available memory during your job. To test this, please submit a new job with each ligand invidiaully or in smaller groups. \
+        These ligands are also described in the file "bad-ligands.txt" in the landing directory for your job.
+        <br> <br>
+        If you have questions about failed ligands, we encourage you to reach out to a team member by either reporting the job or contacting us by clicking "About" \
+        in our header then the dropdown option "Contact Us".<p>
         {lig_failed_DD_table_html}
         """.format(
         lig_failed_DD_table_html=lig_failed_DD_table_html,
@@ -539,12 +544,10 @@ def report_setup(argv):
     work_dir = input_details_dict["work_dir"]
     input_pdb = input_details_dict["params"]["input_pdb"][0]
     input_details_dict["sample_results"]  = glob.glob("{}/{}/out/*/result.csv".format(work_dir, input_pdb))
-    print(input_details_dict["sample_results"])
     if len(input_details_dict["sample_results"]) == 0:
         print('All ligands were marked as invalid by check input smile strings')
         ligand_file = input_details_dict["failed_validation"]
         input_ligand_dict = parse_ligand_file_to_dict(ligand_file)
-        # write_html_report_all_ligands_invalid(input_details_dict, input_ligand_dict)
         return input_details_dict, input_ligand_dict
     else:
         ligand_file = input_details_dict["params"]["ligand_file"]
@@ -553,21 +556,16 @@ def report_setup(argv):
 
 
 def main(argv):
-    print("command recieved 2pm")
-    # print(argv)
-    # report_setup(argv)
     # Set up the variables and ligand dictionary
     input_details_dict, input_ligand_dict = report_setup(argv)
     if len(input_details_dict["sample_results"]) == 0:
         write_html_report_all_ligands_invalid(input_details_dict, input_ligand_dict)
-        print('done')
     else:
         ligand_dict = parse_sample_results(input_details_dict, input_ligand_dict)
         ligand_subtables = ligand_dict["ligand_subtable_raw_html"]
         main_table = ligand_dict["main_table_html"]
         bvbrc_logo_path = input_details_dict["bvbrc_logo"]
         write_html_report(bvbrc_logo_path, main_table, ligand_subtables, input_details_dict, input_ligand_dict)
-    print("nb dev 08_12_2024")
 
 if __name__ == "__main__":
     main(sys.argv)
