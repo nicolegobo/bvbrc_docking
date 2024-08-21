@@ -209,8 +209,7 @@ def parse_sample_results(input_details_dict, input_ligand_dict):
             },
             inplace=True
         )
-        report_tmp["Vinardo ABS"] = report_tmp["Vinardo"].astype(float).abs()
-        report_tmp = report_tmp.sort_values(by="Vinardo ABS", ascending=True)
+        report_tmp = report_tmp.sort_values(by="Vinardo", ascending=True)
         # if "Ligand Name" in report_tmp.columns:
         if "Drugbank Generic Name" in report_tmp.columns:
             report_tmp = report_tmp[[
@@ -254,9 +253,7 @@ def parse_sample_results(input_details_dict, input_ligand_dict):
         top_ranked_ligands = pd.concat([top_ranked_ligands, report_tmp.iloc[:1]], ignore_index=True)
     report_top_ranked_ligands = top_ranked_ligands.copy()
     report_top_ranked_ligands["Ligand ID"] = '<a href="#' + top_ranked_ligands["Ligand ID"] + '">' + top_ranked_ligands["Ligand ID"]+ '</a>'
-    report_top_ranked_ligands["Vinardo ABS"] = report_top_ranked_ligands["Vinardo"].astype(float).abs()
-    report_top_ranked_ligands = report_top_ranked_ligands.sort_values(by="Vinardo ABS", ascending=True)
-    report_top_ranked_ligands.drop(columns="Vinardo ABS", inplace=True)
+    report_top_ranked_ligands = report_top_ranked_ligands.sort_values(by="Vinardo", ascending=True)
     ## START: Make the main table HTML ###
     main_ligand_table_html = generate_table_html_2(report_top_ranked_ligands, table_width='95%')
     # Make the top ligand main table
@@ -333,7 +330,7 @@ def write_html_report(bvbrc_logo_path, main_table, ligand_subtables, input_detai
                     </a>
             </header>
         <p> 
-        Explore the protein-ligand interactions through advanced artifical intelligence (AL) and machine learning (ML).  This service utilizes a diffusion model,\
+        Explore protein-ligand interactions through advanced artificial intelligence (AI) and machine learning (ML).  This service utilizes a diffusion model,\
             <a href="https://arxiv.org/abs/2210.01776" target="_blank">DiffDock</a>
         to compute a set of poses for a target protein structure and a set of small-molecule ligands. The aim is to simulate and analyze potential binding scenarios \
         “in silico”.  Offering a crucial advantage by predicting the success of protein ligand combinations ahead of costly and time-consuming in vivo experiments. \
@@ -342,11 +339,11 @@ def write_html_report(bvbrc_logo_path, main_table, ligand_subtables, input_detai
         
         <h3>About the Analysis Workflow</h3>
         This service utilizes DiffDock to purpose a set of docking configurations for a given protein structure and \
-        a single small molecule.  The diffusion model optimizes the positions and orientations of the small molecule acround the target protein. \
-        The sampeled binding poses are then passed to a confidence model which scores and ranks each pose. To compare across different ligands, \
-        the binding psoes are then scored with GNINA that contains both the CNN modules and Vinardo score function. \
+        a single small molecule.  The diffusion model optimizes the positions and orientations of the small molecule around the target protein. \
+        The sampled binding poses are then passed to a confidence model which scores and ranks each pose. To compare across different ligands, \
+        the binding poses are then scored with GNINA that contains both the CNN modules and Vinardo score function. \
 
-        In our setup, each ligand in DiffDock's top three docked poses are scored with the GINA moel and ranked based on the Vinardo score.  \
+        In our setup, each ligand in DiffDock's top three docked poses are scored with the GINA model and ranked based on the Vinardo score.  \
         For a more detailed description of the models, please visit DiffDock, GNINA and Vinardo. \
         <p>
 
@@ -359,7 +356,7 @@ def write_html_report(bvbrc_logo_path, main_table, ligand_subtables, input_detai
                     <li><strong>Viewer</strong>: Click on the hyperlink to open a new table with the BVBRC protein structure \
                         viewer showing that specific protein ligand interaction.</li>
                     <br>
-                    <li><strong>DiffDocK Confidence</strong>: Confidence score of this result as assigned by DiffDock. A lower confidence score \
+                    <li><strong>DiffDock Confidence</strong>: Confidence score of this result as assigned by DiffDock. A lower confidence score \
                          indicates more confidence in the ligand protein docking successfully. </li>
                     <br>
                     <li><strong>CNN Score</strong>: CNN refers to  a type of artificial intelligence called convolutional neural network \
