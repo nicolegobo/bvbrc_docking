@@ -36,7 +36,6 @@ def check_dd_invalid_ligands(input_details_dict, input_ligand_dict):
     lig_failed_diffdock = os.path.join(input_details_dict["work_dir"], input_details_dict["params"]["input_pdb"][0], "out", "bad-ligands.txt")
     # add an if file exists because this function may be used if all ligands are invalid and diff dock never runs
     path = Path(lig_failed_diffdock)
-    print(path)
     # Check if the file exists and is not empty
     if path.is_file() and path.stat().st_size > 0:
         print("DD failure")
@@ -187,7 +186,6 @@ def parse_sample_results(input_details_dict, input_ligand_dict):
         dff["drugbank_database_URL"] = "https://go.drugbank.com/drugs/" + dff["Ligand ID"]
         dff["drugbank_database_link_html"] ='<a href="' + dff["drugbank_database_URL"] + '" target="_blank">' + dff['Names'] + '</a>'
 
-    print(dff.columns)
     dff["smile_string"] = dff["Ligand ID"].map(input_ligand_dict)
     # path to ligand directory on workspace
     dff["ligand_dir_path"] = f"{url_base}/workspace{workspace_output_path}/.{workspace_output_name_url}/" + dff["protein"] + "/" + dff["Ligand ID"]
