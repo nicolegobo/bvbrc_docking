@@ -21,7 +21,7 @@ def check_RDKit_invalid_ligands(input_details_dict):
             This is a collection of cheminformatics and machine-learning software. RDKit validates SMILE strings according to \
             parsing and sanitization.  For parsing, RDKit uses grammar defined in the <a href="https://github.com/rdkit/rdkit/tree/master/Code/GraphMol/SmilesParse">Smile Parse</a> \
             module. Which closely follows guidelines established in <a href="http://opensmiles.org/opensmiles.html">OpenSmiles</a>. \
-            A detailed explaination of sanitization is available <a href="https://www.rdkit.org/docs/RDKit_Book.html">RDKit Book</a> \
+            A detailed explanation of sanitization is available <a href="https://www.rdkit.org/docs/RDKit_Book.html">RDKit Book</a> \
             under the Molecular Sanitization header. <p>
             {lig_failed_rdkit_table_html}
         """.format(
@@ -36,7 +36,6 @@ def check_dd_invalid_ligands(input_details_dict, input_ligand_dict):
     lig_failed_diffdock = os.path.join(input_details_dict["work_dir"], input_details_dict["params"]["input_pdb"][0], "out", "bad-ligands.txt")
     # add an if file exists because this function may be used if all ligands are invalid and diff dock never runs
     path = Path(lig_failed_diffdock)
-    print(path)
     # Check if the file exists and is not empty
     if path.is_file() and path.stat().st_size > 0:
         print("DD failure")
@@ -53,9 +52,9 @@ def check_dd_invalid_ligands(input_details_dict, input_ligand_dict):
         lig_failed_DD_table_html = generate_table_html_2(dd_failed_ligands_df, table_width='95%')
         dd_failed_ligands_html = """
         <h3> DiffDock Undocked Ligands </h3>
-        <p> Ligands in this table not dock to the protein. This coud be because they are incompatible with the protein or the current version of DiffDock. \
+        <p> Ligands in this table did not dock to the protein. This coud be because they are incompatible with the protein or the current version of DiffDock. \
         Another reason could be the available memory during your job. To test this, please submit a new job with each ligand invidiaully or in smaller groups. \
-        These ligands are also described in the file "bad-ligands.txt" in the landing directory for your job.
+        These ligands are also described in the file "bad-ligands.txt" in the protein subdirectory for your job.
         <br> <br>
         If you have questions about failed ligands, we encourage you to reach out to a team member by either reporting the job or contacting us by clicking "About" \
         in our header then the dropdown option "Contact Us".<p>
@@ -186,6 +185,7 @@ def parse_sample_results(input_details_dict, input_ligand_dict):
         dff['Names'] = dff["Ligand ID"].map(ligand_lib_dict)
         dff["drugbank_database_URL"] = "https://go.drugbank.com/drugs/" + dff["Ligand ID"]
         dff["drugbank_database_link_html"] ='<a href="' + dff["drugbank_database_URL"] + '" target="_blank">' + dff['Names'] + '</a>'
+
     dff["smile_string"] = dff["Ligand ID"].map(input_ligand_dict)
     # path to ligand directory on workspace
     dff["ligand_dir_path"] = f"{url_base}/workspace{workspace_output_path}/.{workspace_output_name_url}/" + dff["protein"] + "/" + dff["Ligand ID"]
@@ -205,12 +205,12 @@ def parse_sample_results(input_details_dict, input_ligand_dict):
                 "CNNscore": "CNN Score", 
                 "CNNaffinity": "CNN Affinity", 
                 "smile_string": "SMILES",
-                "drugbank_database_link_html": "Ligand Name",
+                "drugbank_database_link_html": "Drugbank Generic Name",
             },
             inplace=True
         )
-        report_tmp["Vinardo ABS"] = report_tmp["Vinardo"].astype(float).abs()
-        report_tmp = report_tmp.sort_values(by="Vinardo ABS", ascending=True)
+
+        report_tmp = report_tmp.sort_values(by="Vinardo", ascending=True)
         # if "Ligand Name" in report_tmp.columns:
         if "Drugbank Generic Name" in report_tmp.columns:
             report_tmp = report_tmp[[
@@ -254,9 +254,7 @@ def parse_sample_results(input_details_dict, input_ligand_dict):
         top_ranked_ligands = pd.concat([top_ranked_ligands, report_tmp.iloc[:1]], ignore_index=True)
     report_top_ranked_ligands = top_ranked_ligands.copy()
     report_top_ranked_ligands["Ligand ID"] = '<a href="#' + top_ranked_ligands["Ligand ID"] + '">' + top_ranked_ligands["Ligand ID"]+ '</a>'
-    report_top_ranked_ligands["Vinardo ABS"] = report_top_ranked_ligands["Vinardo"].astype(float).abs()
-    report_top_ranked_ligands = report_top_ranked_ligands.sort_values(by="Vinardo ABS", ascending=True)
-    report_top_ranked_ligands.drop(columns="Vinardo ABS", inplace=True)
+    report_top_ranked_ligands = report_top_ranked_ligands.sort_values(by="Vinardo", ascending=True)
     ## START: Make the main table HTML ###
     main_ligand_table_html = generate_table_html_2(report_top_ranked_ligands, table_width='95%')
     # Make the top ligand main table
@@ -333,7 +331,7 @@ def write_html_report(bvbrc_logo_path, main_table, ligand_subtables, input_detai
                     </a>
             </header>
         <p> 
-        Explore the protein-ligand interactions through advanced artifical intelligence (AL) and machine learning (ML).  This service utilizes a diffusion model,\
+        Explore protein-ligand interactions through advanced artificial intelligence (AI) and machine learning (ML).  This service utilizes a diffusion model,\
             <a href="https://arxiv.org/abs/2210.01776" target="_blank">DiffDock</a>
         to compute a set of poses for a target protein structure and a set of small-molecule ligands. The aim is to simulate and analyze potential binding scenarios \
         “in silico”.  Offering a crucial advantage by predicting the success of protein ligand combinations ahead of costly and time-consuming in vivo experiments. \
@@ -342,11 +340,11 @@ def write_html_report(bvbrc_logo_path, main_table, ligand_subtables, input_detai
         
         <h3>About the Analysis Workflow</h3>
         This service utilizes DiffDock to purpose a set of docking configurations for a given protein structure and \
-        a single small molecule.  The diffusion model optimizes the positions and orientations of the small molecule acround the target protein. \
-        The sampeled binding poses are then passed to a confidence model which scores and ranks each pose. To compare across different ligands, \
-        the binding psoes are then scored with GNINA that contains both the CNN modules and Vinardo score function. \
+        a single small molecule.  The diffusion model optimizes the positions and orientations of the small molecule around the target protein. \
+        The sampled binding poses are then passed to a confidence model which scores and ranks each pose. To compare across different ligands, \
+        the binding poses are then scored with GNINA that contains both the CNN modules and Vinardo score function. \
 
-        In our setup, each ligand in DiffDock's top three docked poses are scored with the GINA moel and ranked based on the Vinardo score.  \
+        In our setup, each ligand in DiffDock's top three docked poses are scored with the GINA model and ranked based on the Vinardo score.  \
         For a more detailed description of the models, please visit DiffDock, GNINA and Vinardo. \
         <p>
 
@@ -357,28 +355,56 @@ def write_html_report(bvbrc_logo_path, main_table, ligand_subtables, input_detai
                         assign “ID #” where the number is assigned according to the line number in the input.</li>
                     <br>
                     <li><strong>Viewer</strong>: Click on the hyperlink to open a new table with the BVBRC protein structure \
-                        viewer showing that specific protein ligand interaction.</li>
+                        viewer showing that specific protein ligand interaction. Please visit the \
+                        <a href="https://alpha.bv-brc.org/docs/tutorial/docking/docking.html">Docking Service Tutorial</a> \
+                        for a detailed explanation of how to use the BVBRC protein structure viewer. </li>
                     <br>
-                    <li><strong>DiffDocK Confidence</strong>: Confidence score of this result as assigned by DiffDock. A lower confidence score \
-                         indicates more confidence in the ligand protein docking successfully. </li>
+                    <li><strong>Vinardo</strong>: Vinardo is a scoring function that helps evaluate how well a ligand might \
+                    bind to a target protein.  Vinardo is often used as an energy scoring function. It estimates the binding \
+                        affinity of a ligand to a protein by calculating the energy of their interaction. Interpreting Vinardo \
+                        value: The lower energy (a more negative score) means they bind together really well. A higher energy \
+                        score means the ligand and protein won't bind together as well.
+                     </li>
                     <br>
-                    <li><strong>CNN Score</strong>: CNN refers to  a type of artificial intelligence called convolutional neural network \
-                        (CNNs).  The CNN Score gives a numerical value that represents how how plausible is the binding pose base on the \
-                        CNN model evaluation. A higher score indicates better \
-                        docking potential. </li>
+                    <li><strong>DiffDock Confidence</strong>: The DiffDock confidence score is a way to measure how sure the tool is that \
+                        the drug or molecule fits well into its target on the protein. Interpreting the DiffDock Confidence values:
+                        <ul>
+                        <br>
+                        <li>If the confidence score is high: DiffDock is pretty sure the molecule fits well and could work effectively.</li>
+                        <br>
+                        <li> If the confidence score is low: DiffDock isn't as sure that the molecule fits properly or that it will work as intended. </li>
+                        </ul>
+                        </li>
                     <br>
-                    <li><strong>CNN Affinity</strong>: CNN affinity is a hypothetical measurement of the ligands affinity to dock with \
-                        the target protein as calculated by the central neural network described above. A higher affinity value indicates a \
-                            a better chance of successful ligand docking.</li>
+                    <li><strong>CNN Score</strong>: CNN score is a number used to show how well the tool predicts that the ligand will fit \
+                        the protein at a specific position. The computer uses a type of artificial intelligence called a Convolutional Neural Network (CNN). \
+                        A CNN is a special program that is very good at recognizing patterns. It considers the shape, size and how the ligand and protein \
+                        fit together and gives a score based on those details. Interpreting the CNN score: A higher score indicates better docking potential. </li>
                     <br>
-                    <li><strong>Vinardo</strong>: An empirical score function that evaluate the binding pose with terms from Gaussian steric \
-                        attractions, quadratic steric repulsions, Lennard-Jones potentials, electrostatic interactions, hydrophobic interactions, \
-                        non-hydrophobic interactions, and non-directional hydrogen bonds.  A lower Vinardo score indicates a better chance of ligand \
-                        binding. </li>
+                    <li><strong>CNN Affinity</strong>: This value represents the strength of the connection between the drug molecule and a position on the target protein. \
+                        Elements that help a strong connection are:
+                        <ul>
+                        <br>
+                        <li>Shape: The shape of the protein binding position. If there is a snug fit between the protein and ligand.</li>
+                        <br>
+                        <li>Chemical Bonds: Different types of bonds form between the ligand and the protein.  These bonds include hydrogen bonds, ionic bonds \
+                            Van Der Waals forces.  The more bonds there are, the stronger the connection will be.</li>
+                        <br>
+                        <li>Hydrophobic Interactions: Some parts of the ligand maybe "water-fearing" (hydrophobic). When these parts come together, they tend to \
+                            stick tightly together to avoid water. </li>
+                        <br>
+                        <li>Electrostatic Interactions: Opposite charges attract. If the ligand has regions with a positive or negative charge that align \
+                            with positive charges on the protein, they can pull each other together which adds to the overall connection.</li>
+                        <br>
+                        <li>Flexibility: Proteins are not rigid structures. Their shape can adjust when a ligand binds to them. The Ligand can also be flexible \
+                            It might rotate or bend in different ways to better bind with the proteins binding site more closely. </li>
+                        <br>
+                        </ul>
+                      Interpreting the CNN Affinity: A higher score indicates better docking potential. </li>
                     <br>
                     <li><strong>SMILES</strong>: SMILES is the “Simplified Molecular Input Line Entry System,” which is used to translate a \
                         chemical's three-dimensional structure into a string of symbols that is easily understood by computer software.   For \
-                        a user friendly explanation please visit this
+                        a user-friendly explanation please visit this
                          <a href="https://www.epa.gov/sites/default/files/2015-05/documents/appendf.pdf" target="_blank"> link</a>.
                            </li>
                     <br>
