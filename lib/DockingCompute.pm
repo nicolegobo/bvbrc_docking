@@ -79,6 +79,10 @@ sub run
         {
         $ligand_file = $self->load_ligand_library("/vol/bvbrc/production/application-backend/bvbrc_docking/test.txt");
         }
+        elsif ($params->{ligand_named_library} eq 'small_db')
+        {
+        $ligand_file = $self->load_ligand_library("/vol/bvbrc/production/application-backend/bvbrc_docking/small_db.txt");
+        }
         else
         {
         die "Unknown ligand library type selected $params->{ligand_library_type}";
