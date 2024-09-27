@@ -33,8 +33,17 @@ TPAGE_ARGS = --define kb_top=$(TARGET) --define kb_runtime=$(DEPLOY_RUNTIME) --d
 
 all: bin 
 
-local_tools: $(BIN_DIR)/run_local_docking
+local_tools: $(BIN_DIR)/run_local_docking $(BIN_DIR)/count-pdb-residues
+
 $(BIN_DIR)/run_local_docking: bvbrc_docking/run_local_docking.py
+	export KB_CONDA_BASE=$(BVDOCK_CONDA_BASE); \
+	export KB_CONDA_ENV=$(BVDOCK_ENV); \
+	$(WRAP_PYTHON_SCRIPT) '$$KB_TOP/modules/$(CURRENT_DIR)/$<' $@
+$(BIN_DIR)/count-pdb-residues: bvbrc_docking/count-pdb-residues.py
+	export KB_CONDA_BASE=$(BVDOCK_CONDA_BASE); \
+	export KB_CONDA_ENV=$(BVDOCK_ENV); \
+	$(WRAP_PYTHON_SCRIPT) '$$KB_TOP/modules/$(CURRENT_DIR)/$<' $@
+$(BIN_DIR)/check_input_smile_strings: scripts/check_input_smile_strings.py
 	export KB_CONDA_BASE=$(BVDOCK_CONDA_BASE); \
 	export KB_CONDA_ENV=$(BVDOCK_ENV); \
 	$(WRAP_PYTHON_SCRIPT) '$$KB_TOP/modules/$(CURRENT_DIR)/$<' $@
@@ -46,7 +55,7 @@ deploy-local-tools:
 	export KB_PYTHON_PATH=$(TARGET)/lib ; \
 	export KB_CONDA_BASE=$(BVDOCK_CONDA_BASE); \
 	export KB_CONDA_ENV=$(BVDOCK_ENV); \
-	for script in run_local_docking ; do \
+	for script in run_local_docking count-pdb-residues check_input_smile_strings ; do \
 	    cp bvbrc_docking/$$script.py $(TARGET)/pybin; \
 	    $(WRAP_PYTHON_SCRIPT) "$$sbase/pybin/$$script.py" $(TARGET)/bin/$$script; \
 	done

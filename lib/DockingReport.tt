@@ -50,13 +50,50 @@ For each docking result for a given protein and ligand we provide the following 
 <hr>
 <h2>[% prot.pdb_id %]: [% prot.title %]</h2>
 
+<h2>Successfully docked ligands</h2>
+Following is the top-ranked conformation for each ligand that docked successfully with the protein. The ligand ID is linked to the list
+of all conformations for that docking result. The "structure" link will display a structure viewer of the
+ligand docked to the protein.<p>
+<table>
+<tr>
+<th>Ligand ID</th>
+<th>Viewer</th>
+<th>Confidence</th>
+<th>CNN Score</th>
+<th>CNN Affinity</th>
+<th>Vinardo</th>
+<th>SMILES</th>
+</tr>
 [% FOR ligand IN ligand_info -%]
-<h3>[% ligand.id %]: [% ligand.smiles %]</h3>
+[% SET this_result = results.${prot.pdb_id}.${ligand.id} -%]
+[% IF this_result.size > 0 -%]
+[% SET res = this_result.0 -%]
+<tr>
+<td><a href="#[% prot.pdb_id %]/[% ligand.id %]">[% ligand.id %]</a></td>
+<td><a href="[% structure_base %]=[% output_folder %]/[% res.output_folder %]/[% res.comb_pdb %]" target="blank">Structure</a></td>
+<td>[% this_result.0.score FILTER format("%.2f") %]</td>
+<td>[% this_result.0.CNNscore FILTER format("%.2f") %]</td>
+<td>[% this_result.0.CNNaffinity FILTER format("%.2f") %]</td>
+<td>[% this_result.0.Vinardo FILTER format("%.2f") %]</td>
+<td>[% ligand.smiles %]</td>
+</tr>
+[% END -%]
+[% END -%]
+</table>
+<hr>
+
+<h2>Per-ligand Details</h2>
+
+[% FOR ligand IN ligand_info -%]
+[% SET this_result = results.${prot.pdb_id}.${ligand.id} -%]
+
+<h3><a name="[% prot.pdb_id %]/[% ligand.id %]">[% ligand.id %]: [% ligand.smiles %]</a></h3>
 
 Ranked docking conformations:<p>
 <table>
 <tr>
 <th>Rank</th>
+<th>Viewer</th>
 <th>Confidence</th>
 <th>CNN Score</th>
 <th>CNN Affinity</th>
@@ -64,7 +101,8 @@ Ranked docking conformations:<p>
 </tr>
 [% FOR res IN results.${prot.pdb_id}.${ligand.id} %]
 <tr>
-<td><a href="[% structure_base %]=[% output_folder %]/[% res.output_folder %]/[% res.comb_pdb %]">[% res.rank %]</a></td>
+<td>[% res.rank %]</td>
+<td><a target="blank" href="[% structure_base %]=[% output_folder %]/[% res.output_folder %]/[% res.comb_pdb %]">Structure</a></td>
 <td>[% res.score %]</td>
 <td>[% res.CNNscore FILTER format("%.2f")  %]</td>
 <td>[% res.CNNaffinity FILTER format("%.2f") %]</td>

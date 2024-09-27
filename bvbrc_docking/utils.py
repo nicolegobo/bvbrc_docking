@@ -151,6 +151,7 @@ class BaseModel(_BaseModel):
             "diffdock_dir",
             "output_dir",
             "top_n",
+            "batch_size",
         ]:
             if key in args:
                 v[key] = adict[key]
@@ -198,6 +199,21 @@ three_to_one = {
 def run_and_save(cmd, cwd=None, output_file=None):
     print(cmd, file=output_file)
     cmd = cmd.split()
+    process = subprocess.Popen(
+        cmd,
+        shell=False,
+        cwd=cwd,
+        stdout=output_file,
+        stderr=subprocess.STDOUT,
+    )
+    rc = process.wait()
+    if rc != 0:
+        print(f"Failure running {cmd}", file=sys.stderr)
+        sys.exit(1)
+    return process
+
+def run_list_and_save(cmd, cwd=None, output_file=None):
+    print(cmd, file=output_file)
     process = subprocess.Popen(
         cmd,
         shell=False,

@@ -22,6 +22,7 @@ from bvbrc_docking.utils import (
     clean_pdb,
     comb_pdb,
     run_and_save,
+    run_list_and_save,
     sdf2pdb,
     validate_smiles,
 )
@@ -35,6 +36,7 @@ class diff_dock(object):
         diffdock_dir,
         output_dir,
         top_n: int = 1,
+        batch_size: int = -1,
         cont_run=False,
         **kwargs,
     ) -> None:
@@ -51,6 +53,7 @@ class diff_dock(object):
         self.run_dir = self.output_dir
 
         self.top_n = top_n
+        self.batch_size = batch_size
 
     def prepare_inputs(self):
         inputs = []
@@ -97,16 +100,26 @@ class diff_dock(object):
         self.log_handle.close()
 
     def run_docking(self):
-        cmd_diffdock = (
-            f"python -m inference "
-            f"--protein_ligand_csv {self.all_runs} "
-            f"--out_dir {self.run_dir} "
-        )
+        #
+        # Run with -u to enable line-buffering so we can see the errors aligned with
+        # the stdout for better debugging.
+        #
+        cmd_diffdock = [
+            "python",
+            "-u",
+            "-m", "inference",
+            "--protein_ligand_csv", self.all_runs,
+            "--out_dir", self.run_dir,
+            "--bad_ligands", f"{self.run_dir}/bad-ligands.txt"
+            ]
 
+        if self.batch_size > 0:
+            cmd_diffdock.extend(["--batch_size", str(self.batch_size)])
+            
         # the run failed with the original diffdock 1.0 parameters used:
         # f"--inference_steps 20 --samples_per_complex 40 --batch_size 6"
 
-        proc = run_and_save(
+        proc = run_list_and_save(
             cmd_diffdock, cwd=self.diffdock_dir, output_file=self.log_handle
         )
 

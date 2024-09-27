@@ -6,17 +6,20 @@ use Cwd qw(abs_path getcwd);
 use File::Copy;
 use File::Copy::Recursive qw(dircopy);
 use File::Path qw(rmtree make_path);
+use File::Spec;
 use strict;
 use Data::Dumper;
 use File::Basename;
 use File::Temp;
-use JSON::XS;
+use JSON;
 use Text::CSV qw(csv);
 use Getopt::Long::Descriptive;
 use P3DataAPI;
 use YAML;
 use Template;
 use Module::Metadata;
+use warnings;
+use strict;
 
 use base 'Class::Accessor';
 __PACKAGE__->mk_accessors(qw(api smiles_list debug work_dir staging_dir output_dir app params
@@ -64,7 +67,27 @@ sub run
     my $ligand_file;
     if ($params->{ligand_library_type} eq 'named_library')
     {
-	$ligand_file = $self->load_ligand_library($params->{ligand_named_library});
+        if ($params->{ligand_named_library} eq 'approved-drugs')
+        {
+	    $ligand_file = $self->load_ligand_library("/vol/bvbrc/production/application-backend/bvbrc_docking/drugbank_approved.txt");
+        }
+        elsif ($params->{ligand_named_library} eq 'experimental_drugs')
+        {
+	    $ligand_file = $self->load_ligand_library("/vol/bvbrc/production/application-backend/bvbrc_docking/drugbank_exp_inv.txt");
+        }
+        elsif ($params->{ligand_named_library} eq 'test')
+        {
+        $ligand_file = $self->load_ligand_library("/vol/bvbrc/production/application-backend/bvbrc_docking/test.txt");
+        }
+        elsif ($params->{ligand_named_library} eq 'small_db')
+        {
+        $ligand_file = $self->load_ligand_library("/vol/bvbrc/production/application-backend/bvbrc_docking/small_db.txt");
+        }
+        else
+        {
+        die "Unknown ligand library type selected $params->{ligand_library_type}";
+        }
+
     }
     elsif ($params->{ligand_library_type} eq 'smiles_list')
     {
@@ -74,6 +97,12 @@ sub run
     {
 	$ligand_file = $self->load_ligand_ws_file($params->{ligand_ws_file});
     }
+
+    #
+    # Add ligand and parameters to self
+    #
+    $params->{ligand_file} = $ligand_file; # all ligand inputs are written to file
+    $self -> {params} = $params;
 
     #
     # Stage the PDB data
@@ -107,32 +136,98 @@ sub run
     }
 }
 
+sub write_zero_valid_ligands_report
+{
+    # my($self, $pdbs) = @_;
+    # my($self, $invalid_ligands_file) = @_;
+    my($self) = @_;
+
+    my $url_base = $ENV{P3_BASE_URL} // "https://www.bv-brc.org";
+    my %vars = (
+        # proteins => $pdbs,
+		work_dir => $self->{work_dir},
+        staging_dir => $self->{staging_dir},
+        output_dir => $self->{output_dir},
+		ligands => $self->{ligand_name},
+		ligand_info => $self->{ligand_info},
+        failed_validation => $self->staging_dir . "/invalid_smile_strings.txt",
+		params => $self->params,
+		output_folder => $self->params->{output_path} . "/." . $self->params->{output_file},
+		url_base => $url_base,
+		feature_base => "$url_base/view/Feature",
+		structure_base => "$url_base/view/ProteinStructure#path",
+        bvbrc_logo => "/vol/bvbrc/production/application-backend/bvbrc_docking/bv-brc-header-logo-bg.png"
+			);
+	# Convert the hash to a JSON string 
+	my $json_text = to_json(\%vars, { pretty => 1 });
+	#Define the path to the report_data.json file
+	my $report_data_path = File::Spec->catfile($self->{work_dir}, "report_data.json");
+
+	# Write the JSON string to the file
+	open(my $fh, '>', $report_data_path) or die "Could not open file '$report_data_path': $!";
+	print $fh $json_text;
+	close($fh);
+	 print "Analysis data written to $report_data_path\n";
+
+	my @cmd = (
+		"write_docking_html_report",
+		"$report_data_path"
+	);
+
+    print STDERR "Run: @cmd\n";
+    my $ok = IPC::Run::run(\@cmd);
+    if (!$ok)
+    {
+     die "Report command failed $?: @cmd";
+    }
+    # upload report
+    
+}
+
 sub write_report
 {
     my($self, $pdbs) = @_;
     
     my $url_base = $ENV{P3_BASE_URL} // "https://www.bv-brc.org";
-    my %vars = (proteins => $pdbs,
+    my %vars = (
+        proteins => $pdbs,
+		work_dir => $self->{work_dir},
+        staging_dir => $self->{staging_dir},
+        output_dir => $self->{output_dir},
 		ligands => $self->{ligand_name},
 		ligand_info => $self->{ligand_info},
+        failed_validation => $self->{failed_validation},
 		results => $self->{result_data},
 		params => $self->params,
 		output_folder => $self->params->{output_path} . "/." . $self->params->{output_file},
 		url_base => $url_base,
 		feature_base => "$url_base/view/Feature",
 		structure_base => "$url_base/view/ProteinStructure#path",
-	       );
+        bvbrc_logo => "/vol/bvbrc/production/application-backend/bvbrc_docking/bv-brc-header-logo-bg.png"
+			);
 
-    my $templ = Template->new(ABSOLUTE => 1);
+	# Convert the hash to a JSON string 
+	my $json_text = to_json(\%vars, { pretty => 1 });
+	#Define the path to the report_data.json file
+	my $report_data_path = File::Spec->catfile($self->{work_dir}, "report_data.json");
 
-    my $mpath = Module::Metadata->find_module_by_name(__PACKAGE__);
-    my $mdir = dirname($mpath);
-    my $report_template = "$mdir/DockingReport.tt";
-    print Dumper(\%vars);
+	# Write the JSON string to the file
+	open(my $fh, '>', $report_data_path) or die "Could not open file '$report_data_path': $!";
+	print $fh $json_text;
+	close($fh);
+	 print "Analysis data written to $report_data_path\n";
 
-    $templ->process($report_template, \%vars, $self->output_dir . "/DockingReport.html") or 
-	die "Error processing template: " . $templ->error();
-	
+	my @cmd = (
+		"write_docking_html_report",
+		"$report_data_path"
+	);
+
+    print STDERR "Run: @cmd\n";
+    my $ok = IPC::Run::run(\@cmd);
+    if (!$ok)
+    {
+     die "Report command failed $?: @cmd";
+    }
 }
 
 #
@@ -142,11 +237,36 @@ sub write_report
 #
 # We've already chdir'd to $work_dir.
 #
+
 sub compute_pdb
 {
     my($self, $pdb, $ligand_file, $work_dir) = @_;
     my $work_out = "$work_dir/out";
+
+    #
+    # Determine if our protein is large enough to require a smaller batch_size
+    #
+    my $residues;
+    my $ok = IPC::Run::run(["count-pdb-residues", $pdb->{local_path}], ">", \$residues);
+    chomp $residues;
+    if (!$ok)
+    {
+	die "Could not determine residue coutn for $pdb->{local_path}";
+    }
+    print STDERR "PDB has $residues residues\n";
+    if ($residues > 1024)
+    {
+	$self->params->{batch_size} = 5;
+	print STDERR "Setting batch_size to " . $self->params->{batch_size} . "\n";
+    }
+    
+    my @batch_size;
+    if ($self->params->{batch_size} =~ /\d/)
+    {
+	@batch_size = ('--batch-size', $self->params->{batch_size});
+    }
     my @cmd = ('run_local_docking',
+	       @batch_size,
 		'--drug-dbs', $ligand_file,
 		'--name', 'diffdock_1_1',
 		'--receptor-pdb', $pdb->{local_path},
@@ -184,29 +304,25 @@ sub compute_pdb
 	{
 	    die "Failed to copy $work_out/$ligand to $out";
 	}
+	#
+	# Also copy the diffdock logfile.
+	#
+	copy("$work_out/diffdock_log", "$out/diffdock_log.txt");
+
+	if (-f "$work_out/bad-ligands.txt") {
+	    copy("$work_out/bad-ligands.txt", "$out/bad-ligands.txt");
+	}
+    # File exists even if it is empty - Checking size
+    my $staging_dir = $self->staging_dir;
+    if (-f "$staging_dir/invalid_smile_strings.txt" && -s "$staging_dir/invalid_smile_strings.txt") {
+    copy("$staging_dir/invalid_smile_strings.txt" , "$out/invalid_smile_strings.txt");
+    }
+
+	
 	my $result_data = csv(in => "$work_out/$ligand/result.csv", headers => 'auto', sep_char => "\t");
 	$_->{output_folder} = "$pdb->{pdb_id}/$ligand" foreach @$result_data;
-
-	# {
-	# 	"CNNaffinity" : "4.2400560379",
-	# 	"CNNscore" : "0.0287393406",
-	# 	"Vinardo" : "17.38850",
-	# 	"comb_pdb" : "1AH5_rank7_confidence-2.63.pdb",
-	# 	"ident" : "ligand-0001",
-	# 	"lig_sdf" : "rank7_confidence-2.63.sdf",
-	# 	"rank" : "7",
-	# 	"score" : "2.63"
-	# }
-
 	$self->{result_data}->{$pdb->{pdb_id}}->{$ligand} = $result_data;
     }
-}
-
-sub load_ligand_library
-{
-    my($self, $lib_name) = @_;
-    print STDERR "Load ligand library $lib_name\n";
-    die "Ligand libraries not supported yet";
 }
 
 sub load_ligand_smiles
@@ -217,8 +333,11 @@ sub load_ligand_smiles
     # We just store this in the smiles_list member.
     #
     $self->{smiles_list} = $smiles_list;
+    my $staging_dir = $self->staging_dir;
+    
+    my $file = $self->staging_dir . "/raw_ligands.smi";
+    my $validated_ligands_file = $self->staging_dir . "/ligands.smi";
 
-    my $file = $self->staging_dir . "/ligands.smi";
     open(F, ">", $file) or die "Cannot write $file: $!";
     my $row = 0;
     my @new;
@@ -244,18 +363,106 @@ sub load_ligand_smiles
 	    $elt = $elt_in;
 	}
 	$id //= sprintf("ligand-%04d", $row + 1);
-	
-	$self->{ligand_map}->{$id} = $row;
-	$self->{ligand_name}[$row] = $id;
-	$self->{ligand_info}[$row] = { id => $id, idx => $row, smiles => $elt };
 	print F join("\t", $id, $elt), "\n";
 	push(@new, $elt);
 	$row++;
     }
-    $self->{smiles_list} = \@new;
-
     close(F);
-    return $file;
+
+    #RUN Validate the input ligands
+    my @cmd = (
+        "check_input_smile_strings",
+        "$staging_dir",
+        "$file",
+        );
+    print STDERR "Run: @cmd\n";
+    my $ok = IPC::Run::run(\@cmd);
+    if (!$ok)
+    {
+     die "Input clean up command failed $?: @cmd";
+    }
+    # Assign the ligand values from the validated ligands.smi
+    open(VF, "<", $validated_ligands_file) or die "Cannot read $validated_ligands_file: $!";
+    $row = 0;
+    @new = ();
+
+    while (my $line = <VF>) {
+        chomp $line;
+        my ($id, $elt) = split("\t", $line);
+
+        $self->{ligand_map}->{$id} = $row;
+        $self->{ligand_name}[$row] = $id;
+        $self->{ligand_info}[$row] = { id => $id, idx => $row, smiles => $elt };
+        push(@new, $elt);
+
+        $row++;
+    }
+
+    $self->{smiles_list} = \@new;
+    close(VF);
+
+    if (-e $validated_ligands_file) { # Check if file exists
+        if (-s $validated_ligands_file == 0) {  # Check if the file size is zero
+            if (-f "$staging_dir/invalid_smile_strings.txt" && -s "$staging_dir/invalid_smile_strings.txt") {
+                    # run the report script
+                    $self->write_zero_valid_ligands_report();
+                    my $output = $self->output_dir;
+                    my $workspace_output_path = $self->params->{output_path} . "/." . $self->params->{output_file};
+                    my @cmd = ("p3-cp", "--overwrite", "$output/small_molecule_docking_report.html", "ws:" . $workspace_output_path);
+                    print STDERR "saving files to workspace... @cmd\n";
+                    my $ok = IPC::Run::run(\@cmd);
+                    if (!$ok)
+                        {
+                        warn "Error $? copying output with @cmd\n";
+                        }
+                    print STDERR "Report uploaded. Exiting before DiffDock runs ";
+                    exit 0;
+                    }
+        } else {
+            # Continue and pass the valid ligands
+            return $validated_ligands_file;
+        }
+    } else {
+        die "Validated ligands file does not exist.\n";
+    }
+}
+
+
+sub load_ligand_library {
+    my ($self, $lib_name) = @_;
+    #
+    # Given a ligand library write ID, Name, and SMILE string to info.txt with names
+    # And pass only ID and SMILE string to match the other inputs
+    #
+    open(my $fh, '<', $lib_name) or die "Could not open file '$lib_name' $!";
+    my $file_contents = do { local $/; <$fh> };
+    close($fh);
+
+    my $dat = ($file_contents);
+    my $staging_dir = $self->staging_dir;
+
+    # Open info.txt for writing in the staging directory
+    open(my $info_fh, '>', "$staging_dir/info.txt") or die "Could not open file '$staging_dir/info.txt' $!";
+
+    open(IN, "<", \$dat) or die "Cannot string-open results: $!";
+    my @dat;
+    while (<IN>) {
+        chomp;
+        s/^\s*//; # Remove leading whitespace
+        next if $_ eq '';
+        my @cols = split(/\s+/);
+        # Check if there are exactly three columns
+        if (scalar @cols == 3) {
+            # Push only ID and SMILES string to @dat
+            push(@dat, [$cols[0], $cols[2]]); # Only pass the ID and SMILES to @dat
+
+            # Write all three columns to info.txt
+            print $info_fh join(' ', @cols) . "\n"; 
+        }
+    }
+    close($info_fh);
+    my $res = $self->load_ligand_smiles(\@dat);
+    return $res;
 }
 
 sub load_ligand_ws_file
@@ -278,7 +485,7 @@ sub load_ligand_ws_file
     my $res = $self->load_ligand_smiles(\@dat);
     return $res;
 }
-		       
+
 sub stage_pdb
 {
     my($self, $pdb_list) = @_;
@@ -314,11 +521,11 @@ sub preflight
 {
     my($app, $app_def, $raw_params, $params) = @_;
 
-    my $mem = '16G';
+    my $mem = '128G';
     
     my $time = 60 * 60 * 10;
     my $pf = {
-	cpu => 2,
+	cpu => 8,
 	memory => $mem,
 	runtime => $time,
 	policy_data => { gpu_count => 1, partition => 'gpu' },
@@ -344,8 +551,7 @@ sub save_output_files
 		      txt => 'txt',
 		      png => 'png',
 		      pdb => 'pdb',
-		      tsv => 'tsv',
-		      txt => 'txt',);
+		      tsv => 'tsv',);
 
     my @suffix_map = map { ("--map-suffix", "$_=$suffix_map{$_}") } keys %suffix_map;
 

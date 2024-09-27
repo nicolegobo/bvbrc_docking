@@ -46,6 +46,7 @@ if __name__ == "__main__":
         "-D", "--diffdock-dir", default=os.getenv("BVDOCK_DIFFDOCK_DIR")
     )
     parser.add_argument("-t", "--top-n", default=3)
+    parser.add_argument("-b", "--batch-size")
     parser.add_argument("output_dir")
     # parser.add_argument("-o", "--output_dir", default="./xout")
 
