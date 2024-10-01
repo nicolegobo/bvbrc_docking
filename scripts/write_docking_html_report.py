@@ -178,7 +178,9 @@ def parse_sample_results(input_details_dict, input_ligand_dict):
                     }
                      )
     dff = dff.round(3)
-    if input_details_dict["params"]["ligand_library_type"] == "named_library":
+    # check for a ws file with three columns 
+    three_col_ws_file = os.path.join(input_details_dict["staging_dir"],"three_col_ws_file.txt")
+    if input_details_dict["params"]["ligand_library_type"] == "named_library" or os.path.exists(three_col_ws_file) :
         ligand_lib_info = os.path.join(input_details_dict["staging_dir"], "info.txt")
         ligand_lib_dict = load_data_to_dict(ligand_lib_info)
         # Adding the 'names' column based on the ligand id

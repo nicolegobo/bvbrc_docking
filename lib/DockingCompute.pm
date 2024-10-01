@@ -402,6 +402,7 @@ sub load_ligand_smiles
     close(VF);
 
     if (-e $validated_ligands_file) { # Check if file exists
+        # Nicole check here for the ligand file?
         if (-s $validated_ligands_file == 0) {  # Check if the file size is zero
             if (-f "$staging_dir/invalid_smile_strings.txt" && -s "$staging_dir/invalid_smile_strings.txt") {
                     # run the report script
@@ -430,10 +431,13 @@ sub load_ligand_smiles
 
 sub load_ligand_library {
     my ($self, $lib_name) = @_;
+
     #
     # Given a ligand library write ID, Name, and SMILE string to info.txt with names
     # And pass only ID and SMILE string to match the other inputs
     #
+
+    # Open the ligand library or local copy of 3 col ws file in the staging directory
     open(my $fh, '<', $lib_name) or die "Could not open file '$lib_name' $!";
     my $file_contents = do { local $/; <$fh> };
     close($fh);
@@ -451,6 +455,7 @@ sub load_ligand_library {
         s/^\s*//; # Remove leading whitespace
         next if $_ eq '';
         my @cols = split(/\s+/);
+
         # Check if there are exactly three columns
         if (scalar @cols == 3) {
             # Push only ID and SMILES string to @dat
@@ -461,6 +466,8 @@ sub load_ligand_library {
         }
     }
     close($info_fh);
+
+    # Pass the filtered data to load_ligand_smiles
     my $res = $self->load_ligand_smiles(\@dat);
     return $res;
 }
@@ -469,22 +476,55 @@ sub load_ligand_ws_file
 {
     my($self, $ws_file) = @_;
 
+    # Download the file contents as a string from the workspace
     my $dat = $self->app->workspace->download_file_to_string($ws_file);
 
+    # Open the string data for reading
     open(IN, "<", \$dat) or die "Cannot string-open results: $!";
     my @dat;
+    my $columns = 0;
+
+    # Read the file and determine the number of columns
     while (<IN>)
     {
-	chomp;
-	s/^\s*//;
-	next if $_ eq '';
-	my @cols = split(/\s+/);
-	push(@dat, [@cols]);
-    }
+        chomp;
+        s/^\s*//;
+        next if $_ eq '';
 
-    my $res = $self->load_ligand_smiles(\@dat);
-    return $res;
+        # Split by tabs or multiple spaces
+        my @cols = split(/\t|\s{2,}/);
+        $columns = scalar(@cols) if $columns == 0;
+        push(@dat, [@cols]);
+    }
+    close(IN);
+
+    if ($columns == 2) {
+        # If there are two columns, pass the data to load_ligand_smiles
+        return $self->load_ligand_smiles(\@dat);
+    }
+    elsif ($columns == 3) {
+        # If there are three columns, write first and third columns to a local file
+
+        # Define the local file path in the staging directory
+        my $local_file = $self->staging_dir . "/three_col_ws_file.txt";
+
+        # Open the local file for writing
+        open(my $local_fh, '>', $local_file) or die "Could not open file '$local_file' $!";
+
+        # Write data to the local file to give ligand library
+        foreach my $row (@dat) {
+            print $local_fh join("\t", @$row) . "\n";  # Use join to print all columns in the row
+        }
+        close($local_fh);
+
+        # Pass the local file path to load_ligand_library like a library
+        return $self->load_ligand_library($local_file);
+    }
+    else {
+        die "Unexpected number of columns ($columns) in file.";
+    }
 }
+
 
 sub stage_pdb
 {
