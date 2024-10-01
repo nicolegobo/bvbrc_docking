@@ -251,12 +251,12 @@ sub compute_pdb
     chomp $residues;
     if (!$ok)
     {
-	die "Could not determine residue coutn for $pdb->{local_path}";
+	die "Could not determine residue count for $pdb->{local_path}";
     }
     print STDERR "PDB has $residues residues\n";
     if ($residues > 1024)
     {
-	$self->params->{batch_size} = 5;
+	$self->params->{batch_size} = 5 if $self->params->{batch_size} > 5;
 	print STDERR "Setting batch_size to " . $self->params->{batch_size} . "\n";
     }
     
