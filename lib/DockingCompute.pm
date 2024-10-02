@@ -120,6 +120,7 @@ sub run
 	make_path($work);
 	chdir($work);
 	$self->compute_pdb($pdb, $ligand_file, $work);
+
     }
 
     #
@@ -450,6 +451,7 @@ sub load_ligand_library {
 
     open(IN, "<", \$dat) or die "Cannot string-open results: $!";
     my @dat;
+
     while (<IN>) {
         chomp;
         s/^\s*//; # Remove leading whitespace
@@ -559,16 +561,42 @@ sub stage_pdb
 
 sub preflight
 {
-    my($app, $app_def, $raw_params, $params) = @_;
+    my ($app, $app_def, $raw_params, $params) = @_;
 
-    my $mem = '128G';
+    my $resource;
     
-    my $time = 60 * 60 * 10;
+    my %resource_map = (
+        named_library => {
+            "experimental_drugs" => { mem => "128G", time => 60 * 60 * 18 }, # 18 hours
+            "approved-drugs" => { mem => "128G", time => 60 * 60 * 16 }, # 16 hours
+            "small_db" => { mem => "128G", time => 60 * 60 * 1  }, # 1 hours
+        },
+        smiles_list => { mem => "128G", time => 60 * 60 * 4 }, # 4 hours
+        ws_file     => { mem => "128G", time => 60 * 60 * 4 }, # 4 hours
+    );
+
+    if (exists $params->{ligand_library_type}) {
+        if ($params->{ligand_library_type} eq 'named_library' && exists $params->{ligand_named_library}) {
+            $resource = $resource_map{named_library}{$params->{ligand_named_library}};
+        } elsif ($params->{ligand_library_type} eq 'smiles_list') {
+            $resource = $resource_map{smiles_list};
+        } elsif ($params->{ligand_library_type} eq 'ws_file') {
+            $resource = $resource_map{ws_file};
+        } else {
+            die "Unknown ligand library type selected: $params->{ligand_library_type}";
+        }
+    } else {
+        die "Ligand library type not specified";
+    }
+
+    my $mem = $resource->{mem};
+    my $runtime = $resource->{time};
+
     my $pf = {
-	cpu => 8,
-	memory => $mem,
-	runtime => $time,
-	policy_data => { gpu_count => 1, partition => 'gpu' },
+        cpu => 8,
+        memory => $mem,
+        runtime => $runtime,
+        policy_data => { gpu_count => 1, partition => 'gpu' },
     };
     return $pf;
 }
