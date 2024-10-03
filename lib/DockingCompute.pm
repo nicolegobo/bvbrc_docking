@@ -446,7 +446,7 @@ sub load_ligand_library {
     my $dat = ($file_contents);
     my $staging_dir = $self->staging_dir;
 
-    # Open info.txt for writing in the staging directory
+    # Open info.txt for writing in the staging directory - exsits with ws files and ligand libs
     open(my $info_fh, '>', "$staging_dir/info.txt") or die "Could not open file '$staging_dir/info.txt' $!";
 
     open(IN, "<", \$dat) or die "Cannot string-open results: $!";
@@ -458,13 +458,12 @@ sub load_ligand_library {
         next if $_ eq '';
         my @cols = split(/\s+/);
 
-        # Check if there are exactly three columns
-        if (scalar @cols == 3) {
+        # Check if there are at least three columns (to accomodate names with spaces without tabs)
+        if (scalar @cols >= 3) {
             # Push only ID and SMILES string to @dat
-            push(@dat, [$cols[0], $cols[2]]); # Only pass the ID and SMILES to @dat
-
-            # Write all three columns to info.txt
-            print $info_fh join(' ', @cols) . "\n"; 
+            push(@dat, [$cols[0], $cols[-1]]); # Only pass the ID (first column) and SMILES (last column) to @dat
+            # Write all columns to info.txt with tab between only the first and last columns
+            print $info_fh $cols[0] . "\t" . join(" ", @cols[1..$#cols-1]) . "\t" . $cols[$#cols] . "\n";
         }
     }
     close($info_fh);
@@ -504,7 +503,7 @@ sub load_ligand_ws_file
         # If there are two columns, pass the data to load_ligand_smiles
         return $self->load_ligand_smiles(\@dat);
     }
-    elsif ($columns == 3) {
+    elsif ($columns >= 3) {
         # If there are three columns, write first and third columns to a local file
 
         # Define the local file path in the staging directory
