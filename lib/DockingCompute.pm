@@ -120,6 +120,7 @@ sub run
 	make_path($work);
 	chdir($work);
 	$self->compute_pdb($pdb, $ligand_file, $work);
+
     }
 
     #
@@ -445,24 +446,24 @@ sub load_ligand_library {
     my $dat = ($file_contents);
     my $staging_dir = $self->staging_dir;
 
-    # Open info.txt for writing in the staging directory
+    # Open info.txt for writing in the staging directory - exsits with ws files and ligand libs
     open(my $info_fh, '>', "$staging_dir/info.txt") or die "Could not open file '$staging_dir/info.txt' $!";
 
     open(IN, "<", \$dat) or die "Cannot string-open results: $!";
     my @dat;
+
     while (<IN>) {
         chomp;
         s/^\s*//; # Remove leading whitespace
         next if $_ eq '';
         my @cols = split(/\s+/);
 
-        # Check if there are exactly three columns
-        if (scalar @cols == 3) {
+        # Check if there are at least three columns (to accomodate names with spaces without tabs)
+        if (scalar @cols >= 3) {
             # Push only ID and SMILES string to @dat
-            push(@dat, [$cols[0], $cols[2]]); # Only pass the ID and SMILES to @dat
-
-            # Write all three columns to info.txt
-            print $info_fh join(' ', @cols) . "\n"; 
+            push(@dat, [$cols[0], $cols[-1]]); # Only pass the ID (first column) and SMILES (last column) to @dat
+            # Write all columns to info.txt with tab between only the first and last columns
+            print $info_fh $cols[0] . "\t" . join(" ", @cols[1..$#cols-1]) . "\t" . $cols[$#cols] . "\n";
         }
     }
     close($info_fh);
@@ -502,7 +503,7 @@ sub load_ligand_ws_file
         # If there are two columns, pass the data to load_ligand_smiles
         return $self->load_ligand_smiles(\@dat);
     }
-    elsif ($columns == 3) {
+    elsif ($columns >= 3) {
         # If there are three columns, write first and third columns to a local file
 
         # Define the local file path in the staging directory
@@ -559,16 +560,42 @@ sub stage_pdb
 
 sub preflight
 {
-    my($app, $app_def, $raw_params, $params) = @_;
+    my ($app, $app_def, $raw_params, $params) = @_;
 
-    my $mem = '128G';
+    my $resource;
     
-    my $time = 60 * 60 * 10;
+    my %resource_map = (
+        named_library => {
+            "experimental_drugs" => { mem => "128G", time => 60 * 60 * 18 }, # 18 hours
+            "approved-drugs" => { mem => "128G", time => 60 * 60 * 16 }, # 16 hours
+            "small_db" => { mem => "128G", time => 60 * 60 * 1  }, # 1 hours
+        },
+        smiles_list => { mem => "128G", time => 60 * 60 * 4 }, # 4 hours
+        ws_file     => { mem => "128G", time => 60 * 60 * 4 }, # 4 hours
+    );
+
+    if (exists $params->{ligand_library_type}) {
+        if ($params->{ligand_library_type} eq 'named_library' && exists $params->{ligand_named_library}) {
+            $resource = $resource_map{named_library}{$params->{ligand_named_library}};
+        } elsif ($params->{ligand_library_type} eq 'smiles_list') {
+            $resource = $resource_map{smiles_list};
+        } elsif ($params->{ligand_library_type} eq 'ws_file') {
+            $resource = $resource_map{ws_file};
+        } else {
+            die "Unknown ligand library type selected: $params->{ligand_library_type}";
+        }
+    } else {
+        die "Ligand library type not specified";
+    }
+
+    my $mem = $resource->{mem};
+    my $runtime = $resource->{time};
+
     my $pf = {
-	cpu => 8,
-	memory => $mem,
-	runtime => $time,
-	policy_data => { gpu_count => 1, partition => 'gpu' },
+        cpu => 8,
+        memory => $mem,
+        runtime => $runtime,
+        policy_data => { gpu_count => 1, partition => 'gpu' },
     };
     return $pf;
 }
