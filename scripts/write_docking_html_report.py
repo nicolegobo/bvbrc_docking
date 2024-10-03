@@ -15,7 +15,6 @@ def check_RDKit_invalid_ligands(input_details_dict):
     path = Path(lig_failed_rdkit)
     if path.is_file() and path.stat().st_size > 0:
         invalid_ligs_df = pd.read_csv(lig_failed_rdkit, sep='\t', header=None, names=['Ligand ID', 'SMILE'])
-        print(invalid_ligs_df.columns)
         # match up the invalid ligands with the sample names according to the IDs
         three_col_ws_file = os.path.join(input_details_dict["staging_dir"],"three_col_ws_file.txt")
         if input_details_dict["params"]["ligand_library_type"] == "named_library" or os.path.exists(three_col_ws_file):
@@ -23,7 +22,6 @@ def check_RDKit_invalid_ligands(input_details_dict):
             info_file = os.path.join(input_details_dict["staging_dir"], "info.txt")
             three_col_df = pd.read_csv(info_file, sep='\t', header=None)
             three_col_df.columns = ["Ligand ID", "Names_col", "Smile String"]
-            print(three_col_df)
             invalid_ligs_df = pd.merge(three_col_df, invalid_ligs_df, on="Ligand ID", how="left")
             # drop any rows where names exist but they aren't dd failed ligands
             invalid_ligs_df.dropna(inplace=True)
@@ -214,7 +212,6 @@ def parse_sample_results(input_details_dict, input_ligand_dict):
         # ensure names with spaces are not lost
         info_file = os.path.join(input_details_dict["staging_dir"], "info.txt")
         three_col_df = pd.read_csv(info_file, sep='\t', header=None)
-        print(three_col_df)
         three_col_df.columns = ["Ligand ID", "Names", "Smile String"]
         # merge the names to the main dataframe
         dff = pd.merge(three_col_df, dff, on="Ligand ID", how="left")
