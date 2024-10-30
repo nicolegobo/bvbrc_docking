@@ -306,8 +306,7 @@ def parse_sample_results(input_details_dict, input_ligand_dict):
 def write_html_report(bvbrc_logo_path, main_table, ligand_subtables, input_details_dict, input_ligand_dict):
     base64_string = image_to_base64(bvbrc_logo_path)
     bvbrc_logo_base64 = f'<div class="image-container"><img src="data:image/png;base64,{base64_string}" alt="Embedded Image"></div>'
-    print(input_details_dict)
-    if 'proteins' in input_details_dict and 'title' in input_details_dict['proteins'][0]:
+    if input_details_dict["params"]["protein_input_type"] == "input_pdb":
         print("Title exists:", input_details_dict['proteins'][0]['title'])
         protein_title = input_details_dict['proteins'][0]['title']
     else:
