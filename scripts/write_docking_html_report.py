@@ -228,6 +228,10 @@ def parse_sample_results(input_details_dict, input_ligand_dict):
     dff["ligand_dir_path"] = f"{url_base}/workspace{workspace_output_path}/.{workspace_output_name_url}/" + dff["protein"] + "/" + dff["Ligand ID"]
     dff["viewer_URL"] = "{}={}/.{}/".format(structure_base, workspace_output_path,workspace_output_name_url) + dff["protein"] + "/" + dff["Ligand ID"] + "/" + dff["comb_pdb"]
     dff["structure_link_html"] = '<a href="' + dff["viewer_URL"] + '" target="_blank">Structure</a>'
+    # Nicole
+    work_dir = input_details_dict["work_dir"]
+    tmp_path = os.path.join(work_dir, "raw_report_data.tsv")
+    dff.to_csv(tmp_path, sep="\t")
     ligand_subtables = ""
     for ligand in pd.unique(dff["Ligand ID"]):
         report_tmp = dff.loc[dff["Ligand ID"] == ligand].copy()
@@ -612,7 +616,7 @@ def report_setup(argv):
     input_details_dict = json.loads(file_content)
     work_dir = input_details_dict["work_dir"]
     keys = list(input_details_dict['results'].keys())
-    input_pdb = keys[0] # TO DO Update to iterate through the list 
+    input_pdb = keys[0] # TO DO Update to iterate through the list of proteins
     input_details_dict["sample_results"]  = glob.glob("{}/{}/out/*/result.csv".format(work_dir, input_pdb))
     if len(input_details_dict["sample_results"]) == 0:
         print('All ligands were marked as invalid by check input smile strings')

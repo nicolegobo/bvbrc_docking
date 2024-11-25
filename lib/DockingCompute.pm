@@ -217,15 +217,18 @@ sub write_zero_valid_ligands_report
 	my $json_text = to_json(\%vars, { pretty => 1 });
 	#Define the path to the report_data.json file
 	my $report_data_path = File::Spec->catfile($self->{work_dir}, "report_data.json");
-
+    my $raw_report_tsv = File::Spec->catfile($self->{work_dir}, "raw_report_data.tsv");
+    my $output_html_table = File::Spec->catfile($self->{output_dir}, "docking_results_explorer.html");
 	# Write the JSON string to the file
 	open(my $fh, '>', $report_data_path) or die "Could not open file '$report_data_path': $!";
 	print $fh $json_text;
 	close($fh);
-	 print "Analysis data written to $report_data_path\n";
+	print "Analysis data written to $report_data_path\n";
 
+    # Docking report
 	my @cmd = (
-		"write_docking_html_report",
+        "python3",
+		"/home/nbowers/bvbrc-dev/dev_container/modules/bvbrc_docking/scripts/write_docking_html_report.py",
 		"$report_data_path"
 	);
 
@@ -235,8 +238,20 @@ sub write_zero_valid_ligands_report
     {
      die "Report command failed $?: @cmd";
     }
-    # upload report
-    
+
+    # TSV to HTML viewer
+	my @new_cmd = (
+		"python3",
+        "/home/nbowers/bvbrc-dev/dev_container/docking_dev/interactive_table/tsv_to_html.py",
+		"$raw_report_tsv",
+        "$output_html_table"
+	);
+    print STDERR "Run new command: @new_cmd\n";
+    my $ok = IPC::Run::run(\@new_cmd);
+    if (!$ok)
+    {
+     die "Table command failed $?: @new_cmd";
+    }
 }
 
 sub write_report
@@ -265,12 +280,14 @@ sub write_report
 	my $json_text = to_json(\%vars, { pretty => 1 });
 	#Define the path to the report_data.json file
 	my $report_data_path = File::Spec->catfile($self->{work_dir}, "report_data.json");
+    my $raw_report_tsv = File::Spec->catfile($self->{work_dir}, "raw_report_data.tsv");
+    my $output_html_table = File::Spec->catfile($self->{output_dir}, "docking_results_explorer.html");
 
 	# Write the JSON string to the file
 	open(my $fh, '>', $report_data_path) or die "Could not open file '$report_data_path': $!";
 	print $fh $json_text;
 	close($fh);
-	 print "Analysis data written to $report_data_path\n";
+	print "Analysis data written to $report_data_path\n";
 
 	my @cmd = (
 		"write_docking_html_report",
@@ -278,10 +295,24 @@ sub write_report
 	);
 
     print STDERR "Run: @cmd\n";
-    my $ok = IPC::Run::run(\@cmd);
-    if (!$ok)
+    my $new_ok = IPC::Run::run(\@cmd);
+    if (!$new_ok)
     {
      die "Report command failed $?: @cmd";
+    }
+
+    # TSV to HTML viewer
+	my @new_cmd = (
+		"python3",
+        "/home/nbowers/bvbrc-dev/dev_container/docking_dev/interactive_table/tsv_to_html.py",
+		"$raw_report_tsv",
+        "$output_html_table"
+	);
+    print STDERR "Run new command: @new_cmd\n";
+    my $new_ok = IPC::Run::run(\@new_cmd);
+    if (!$new_ok)
+    {
+     die "Table command failed $?: @new_cmd";
     }
 }
 
@@ -367,9 +398,7 @@ sub compute_pdb
 
 	
 	my $result_data = csv(in => "$work_out/$ligand/result.csv", headers => 'auto', sep_char => "\t");
-    print("line 528");
 	$_->{output_folder} = "$pdb->{pdb_id}/$ligand" foreach @$result_data;
-    print("line 530");
 	$self->{result_data}->{$pdb->{pdb_id}}->{$ligand} = $result_data;
     }
 }
