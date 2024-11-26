@@ -2,7 +2,7 @@ import pandas as pd
 import json
 import sys
 
-def tsv_to_html(tsv_file_path, html_output_path):
+def tsv_to_html(tsv_file_path, html_output_path, tsv_output_path):
     """
     Convert a TSV file to an interactive HTML table.
 
@@ -46,8 +46,16 @@ def tsv_to_html(tsv_file_path, html_output_path):
                     "CNN Affinity", 
                     "SMILES",
                 ]]
-        raw_data.to_csv('file_check.csv')
-        # Convert DataFrame to JSON in 'records' orientation
+        out_tsv = raw_data[[
+                    "Ligand ID",  
+                    "Vinardo", 
+                    "DiffDock confidence", 
+                    "CNN Score", 
+                    "CNN Affinity", 
+                    "SMILES",
+        ]]
+        out_tsv.to_csv(tsv_output_path, sep="\t", index=False)
+        # Convert DataFrame to JSON in 'records' orientation so each entry is treated as a list
         json_data = raw_data.to_json(orient='records', indent=4)
 
         # HTML template with embedded JSON
@@ -201,11 +209,12 @@ def tsv_to_html(tsv_file_path, html_output_path):
         print("Error: {e}".format(e=e))
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: python3 tsv_to_html.py <input_tsv_file> <output_html_file>")
+    if len(sys.argv) != 4:
+        print("Usage: python3 tsv_to_html.py <input_tsv_file> <output_html_file> <output_tsv_file>")
     else:
         tsv_file_path = sys.argv[1]
         tsv_df =pd.read_csv(tsv_file_path, sep="\t")
         html_output_path = sys.argv[2]
-        tsv_to_html(tsv_file_path, html_output_path)
+        tsv_output_path = sys.argv[3]
+        tsv_to_html(tsv_file_path, html_output_path, tsv_output_path)
 

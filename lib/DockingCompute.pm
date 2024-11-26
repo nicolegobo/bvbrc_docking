@@ -151,17 +151,10 @@ sub run
                     # Look for the HEADER line
                     if ($line =~ /^HEADER/)
                     {
-                        ### OPTION 1 GET THE LAST FOR CHARACTESR OF THE LINE ###
-                        # Uniprot uses a standard file width format
                         # Extract the protein ID from the last 4 characters of the line
                         $protein_id = substr($line, 62, 4);
                         last;  # Exit the loop after finding the HEADER line
                     }
-                    ### OPTION 2: If HEADER is not found, use the filename ###
-                if (!defined $protein_id) {
-                    # Use File::Basename to get the base filename without the directory path
-                    $protein_id = basename($pdb_file);
-                }
                 } 
                 close($fh);
 
@@ -169,7 +162,7 @@ sub run
                 if (defined $protein_id && $protein_id ne '') {
                     print "Protein ID: $protein_id\n";
                 } else {
-                    die "Protein ID $protein_id is not set or empty!";
+                    die "Protein ID $protein_id is not set or empty! Check PDB file header";
                 }
                 my $work = "$work_dir/$protein_id";
                 make_path($work) or die "Could not create directory'$work': $!";
@@ -217,6 +210,8 @@ sub write_zero_valid_ligands_report
 	my $report_data_path = File::Spec->catfile($self->{work_dir}, "report_data.json");
     my $raw_report_tsv = File::Spec->catfile($self->{work_dir}, "raw_report_data.tsv");
     my $output_html_table = File::Spec->catfile($self->{output_dir}, "docking_results_explorer.html");
+    my $output_results_tsv = File::Spec->catfile($self->{output_dir}, "docking_results.tsv");
+
 	# Write the JSON string to the file
 	open(my $fh, '>', $report_data_path) or die "Could not open file '$report_data_path': $!";
 	print $fh $json_text;
@@ -240,7 +235,8 @@ sub write_zero_valid_ligands_report
 	my @new_cmd = (
 		"tsv_to_html",
 		"$raw_report_tsv",
-        "$output_html_table"
+        "$output_html_table",
+        "$output_results_tsv"
 	);
     print STDERR "Run new command: @new_cmd\n";
     my $new_ok = IPC::Run::run(\@new_cmd);
@@ -278,8 +274,9 @@ sub write_report
 	my $report_data_path = File::Spec->catfile($self->{work_dir}, "report_data.json");
     my $raw_report_tsv = File::Spec->catfile($self->{work_dir}, "raw_report_data.tsv");
     my $output_html_table = File::Spec->catfile($self->{output_dir}, "docking_results_explorer.html");
-
-	# Write the JSON string to the file
+    my $output_results_tsv = File::Spec->catfile($self->{output_dir}, "docking_results.tsv");
+	
+    # Write the JSON string to the file
 	open(my $fh, '>', $report_data_path) or die "Could not open file '$report_data_path': $!";
 	print $fh $json_text;
 	close($fh);
@@ -301,7 +298,8 @@ sub write_report
 	my @new_cmd = (
 		"tsv_to_html",
 		"$raw_report_tsv",
-        "$output_html_table"
+        "$output_html_table",
+        "$output_results_tsv"
 	);
     print STDERR "Run new command: @new_cmd\n";
     my $new_ok = IPC::Run::run(\@new_cmd);
