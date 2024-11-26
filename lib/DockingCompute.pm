@@ -145,11 +145,7 @@ sub run
                         }
                 my $pdb_file = $self->staging_dir . "/" . basename($filename);
                 my $protein_id;
-                # NB TO DO
-                # 1. check the header, if it is not in the header, use file name 
-                # 2. Change for grabbing the last 4 of the header row
-                # open the file, get the header (final item in the first row)
-                # 3. edit function for when zero ligands are docked
+                # Find protein ID in PDB file
                 open (my $fh, '<', $pdb_file) or die "Could not open file '$pdb_file' $!";
                 while (my $line = <$fh>) {
                     # Look for the HEADER line
@@ -161,9 +157,11 @@ sub run
                         $protein_id = substr($line, 62, 4);
                         last;  # Exit the loop after finding the HEADER line
                     }
-                    # else ### OPTION 2 GET the filename ###
-                    # {
-                    # }
+                    ### OPTION 2: If HEADER is not found, use the filename ###
+                if (!defined $protein_id) {
+                    # Use File::Basename to get the base filename without the directory path
+                    $protein_id = basename($pdb_file);
+                }
                 } 
                 close($fh);
 
@@ -227,8 +225,7 @@ sub write_zero_valid_ligands_report
 
     # Docking report
 	my @cmd = (
-        "python3",
-		"/home/nbowers/bvbrc-dev/dev_container/modules/bvbrc_docking/scripts/write_docking_html_report.py",
+        "write_docking_html_report",
 		"$report_data_path"
 	);
 
@@ -241,16 +238,15 @@ sub write_zero_valid_ligands_report
 
     # TSV to HTML viewer
 	my @new_cmd = (
-		"python3",
-        "/home/nbowers/bvbrc-dev/dev_container/docking_dev/interactive_table/tsv_to_html.py",
+		"tsv_to_html",
 		"$raw_report_tsv",
         "$output_html_table"
 	);
     print STDERR "Run new command: @new_cmd\n";
-    my $ok = IPC::Run::run(\@new_cmd);
-    if (!$ok)
+    my $new_ok = IPC::Run::run(\@new_cmd);
+    if (!$new_ok)
     {
-     die "Table command failed $?: @new_cmd";
+     die "HTML Table command failed $?: @new_cmd";
     }
 }
 
@@ -295,16 +291,15 @@ sub write_report
 	);
 
     print STDERR "Run: @cmd\n";
-    my $new_ok = IPC::Run::run(\@cmd);
-    if (!$new_ok)
+    my $ok = IPC::Run::run(\@cmd);
+    if (!$ok)
     {
      die "Report command failed $?: @cmd";
     }
 
     # TSV to HTML viewer
 	my @new_cmd = (
-		"python3",
-        "/home/nbowers/bvbrc-dev/dev_container/docking_dev/interactive_table/tsv_to_html.py",
+		"tsv_to_html",
 		"$raw_report_tsv",
         "$output_html_table"
 	);
@@ -312,7 +307,7 @@ sub write_report
     my $new_ok = IPC::Run::run(\@new_cmd);
     if (!$new_ok)
     {
-     die "Table command failed $?: @new_cmd";
+     die "HTML Table command failed $?: @new_cmd";
     }
 }
 
