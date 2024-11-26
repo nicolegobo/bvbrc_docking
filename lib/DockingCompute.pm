@@ -145,25 +145,16 @@ sub run
                         }
                 my $pdb_file = $self->staging_dir . "/" . basename($filename);
                 my $protein_id;
-                # NB TO DO
-                # 1. check the header, if it is not in the header, use file name 
-                # 2. Change for grabbing the last 4 of the header row
-                # open the file, get the header (final item in the first row)
-                # 3. edit function for when zero ligands are docked
+                # Find protein ID in PDB file
                 open (my $fh, '<', $pdb_file) or die "Could not open file '$pdb_file' $!";
                 while (my $line = <$fh>) {
                     # Look for the HEADER line
                     if ($line =~ /^HEADER/)
                     {
-                        ### OPTION 1 GET THE LAST FOR CHARACTESR OF THE LINE ###
-                        # Uniprot uses a standard file width format
                         # Extract the protein ID from the last 4 characters of the line
                         $protein_id = substr($line, 62, 4);
                         last;  # Exit the loop after finding the HEADER line
                     }
-                    # else ### OPTION 2 GET the filename ###
-                    # {
-                    # }
                 } 
                 close($fh);
 
@@ -171,7 +162,7 @@ sub run
                 if (defined $protein_id && $protein_id ne '') {
                     print "Protein ID: $protein_id\n";
                 } else {
-                    die "Protein ID $protein_id is not set or empty!";
+                    die "Protein ID $protein_id is not set or empty! Check PDB file header";
                 }
                 my $work = "$work_dir/$protein_id";
                 make_path($work) or die "Could not create directory'$work': $!";
@@ -217,15 +208,19 @@ sub write_zero_valid_ligands_report
 	my $json_text = to_json(\%vars, { pretty => 1 });
 	#Define the path to the report_data.json file
 	my $report_data_path = File::Spec->catfile($self->{work_dir}, "report_data.json");
+    my $raw_report_tsv = File::Spec->catfile($self->{work_dir}, "raw_report_data.tsv");
+    my $output_html_table = File::Spec->catfile($self->{output_dir}, "docking_results_explorer.html");
+    my $output_results_tsv = File::Spec->catfile($self->{output_dir}, "docking_results.tsv");
 
 	# Write the JSON string to the file
 	open(my $fh, '>', $report_data_path) or die "Could not open file '$report_data_path': $!";
 	print $fh $json_text;
 	close($fh);
-	 print "Analysis data written to $report_data_path\n";
+	print "Analysis data written to $report_data_path\n";
 
+    # Docking report
 	my @cmd = (
-		"write_docking_html_report",
+        "write_docking_html_report",
 		"$report_data_path"
 	);
 
@@ -235,8 +230,20 @@ sub write_zero_valid_ligands_report
     {
      die "Report command failed $?: @cmd";
     }
-    # upload report
-    
+
+    # TSV to HTML viewer
+	my @new_cmd = (
+		"tsv_to_html",
+		"$raw_report_tsv",
+        "$output_html_table",
+        "$output_results_tsv"
+	);
+    print STDERR "Run new command: @new_cmd\n";
+    my $new_ok = IPC::Run::run(\@new_cmd);
+    if (!$new_ok)
+    {
+     die "HTML Table command failed $?: @new_cmd";
+    }
 }
 
 sub write_report
@@ -265,12 +272,15 @@ sub write_report
 	my $json_text = to_json(\%vars, { pretty => 1 });
 	#Define the path to the report_data.json file
 	my $report_data_path = File::Spec->catfile($self->{work_dir}, "report_data.json");
-
-	# Write the JSON string to the file
+    my $raw_report_tsv = File::Spec->catfile($self->{work_dir}, "raw_report_data.tsv");
+    my $output_html_table = File::Spec->catfile($self->{output_dir}, "docking_results_explorer.html");
+    my $output_results_tsv = File::Spec->catfile($self->{output_dir}, "docking_results.tsv");
+	
+    # Write the JSON string to the file
 	open(my $fh, '>', $report_data_path) or die "Could not open file '$report_data_path': $!";
 	print $fh $json_text;
 	close($fh);
-	 print "Analysis data written to $report_data_path\n";
+	print "Analysis data written to $report_data_path\n";
 
 	my @cmd = (
 		"write_docking_html_report",
@@ -282,6 +292,20 @@ sub write_report
     if (!$ok)
     {
      die "Report command failed $?: @cmd";
+    }
+
+    # TSV to HTML viewer
+	my @new_cmd = (
+		"tsv_to_html",
+		"$raw_report_tsv",
+        "$output_html_table",
+        "$output_results_tsv"
+	);
+    print STDERR "Run new command: @new_cmd\n";
+    my $new_ok = IPC::Run::run(\@new_cmd);
+    if (!$new_ok)
+    {
+     die "HTML Table command failed $?: @new_cmd";
     }
 }
 
@@ -367,9 +391,7 @@ sub compute_pdb
 
 	
 	my $result_data = csv(in => "$work_out/$ligand/result.csv", headers => 'auto', sep_char => "\t");
-    print("line 528");
 	$_->{output_folder} = "$pdb->{pdb_id}/$ligand" foreach @$result_data;
-    print("line 530");
 	$self->{result_data}->{$pdb->{pdb_id}}->{$ligand} = $result_data;
     }
 }
