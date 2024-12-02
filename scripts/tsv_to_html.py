@@ -1,5 +1,5 @@
 import pandas as pd
-import json
+import os.path
 import sys
 
 def tsv_to_html(tsv_file_path, html_output_path, tsv_output_path):
@@ -180,7 +180,7 @@ def tsv_to_html(tsv_file_path, html_output_path, tsv_output_path):
 
                     // Initialize DataTables
                     $('#dataTable').DataTable({{
-                        pageLength: 25,  // Rows per page
+                        pageLength: 10,  // Rows per page
                         lengthMenu: [10, 25, 50, 100],  // Pagination options
                         orderCellsTop: true,  // Keep filters at the top
                         initComplete: function () {{
@@ -193,6 +193,11 @@ def tsv_to_html(tsv_file_path, html_output_path, tsv_output_path):
                 // Populate the table on page load
                 document.addEventListener('DOMContentLoaded', function () {{
                     populateTable(tableData);
+                    // Ensure all links open in a new tab
+                    const links = document.querySelectorAll('#dataTable a');
+                    links.forEach(link => {{
+                        link.target = '_blank';
+                    }});
                 }});
             </script>
         </body>
@@ -213,8 +218,9 @@ if __name__ == "__main__":
         print("Usage: python3 tsv_to_html.py <input_tsv_file> <output_html_file> <output_tsv_file>")
     else:
         tsv_file_path = sys.argv[1]
-        tsv_df =pd.read_csv(tsv_file_path, sep="\t")
         html_output_path = sys.argv[2]
         tsv_output_path = sys.argv[3]
-        tsv_to_html(tsv_file_path, html_output_path, tsv_output_path)
-
+        if os.path.isfile(tsv_file_path):
+            tsv_to_html(tsv_file_path, html_output_path, tsv_output_path)
+        else:
+            sys.stderr.write("No ligands bound to protein")
