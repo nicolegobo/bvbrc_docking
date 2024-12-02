@@ -129,7 +129,6 @@ sub run
         }
         elsif ($params->{protein_input_type} eq 'user_pdb_file')
         {
-            print(Dumper $params);
             my @ws_pdb_file_list = @{$params->{user_pdb_file}};
             # wrap into a function # stage_ws_pdb
             foreach my $pdb_ws_file (@ws_pdb_file_list) {
@@ -145,30 +144,37 @@ sub run
                         }
                 my $pdb_file = $self->staging_dir . "/" . basename($filename);
                 my $protein_id;
-                # Find protein ID in PDB file
+
+                # Open the PDB file for reading
                 open (my $fh, '<', $pdb_file) or die "Could not open file '$pdb_file' $!";
+                my $protein_id;
+
+                # Try to find the protein ID in the HEADER line
                 while (my $line = <$fh>) {
                     # Look for the HEADER line
-                    if ($line =~ /^HEADER/)
-                    {
+                    if ($line =~ /^HEADER/) {
                         # Extract the protein ID from the last 4 characters of the line
                         $protein_id = substr($line, 62, 4);
+                        $protein_id =~ s/\s+//g;  # Remove any extra whitespace
                         last;  # Exit the loop after finding the HEADER line
                     }
                 } 
                 close($fh);
-
-                # Check if protein ID is defined and valid
-                if (defined $protein_id && $protein_id ne '') {
-                    print "Protein ID: $protein_id\n";
-                } else {
-                    die "Protein ID $protein_id is not set or empty! Check PDB file header";
+                
+                # Always use the filename as a fallback if protein ID is not valid
+                if (!defined $protein_id || $protein_id eq '') {
+                    # Use the filename (without extension) as the fallback protein ID
+                    $protein_id = basename($filename, ".pdb");
+                    warn "Protein ID not found in HEADER line; using filename '$protein_id' as fallback.";
                 }
+                # Proceed with the protein ID
+                print "Protein ID: $protein_id\n";
+
                 my $work = "$work_dir/$protein_id";
                 make_path($work) or die "Could not create directory'$work': $!";
 
                 chdir($work);
-                # # make pdb object to match the rest of the code
+                # make pdb object to match the rest of the code
                 my $pdb = {
                     "local_path" => $pdb_file,
                     "pdb_id" => $protein_id,
